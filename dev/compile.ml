@@ -6,7 +6,8 @@ let rec compile_expr (e : expr) : instruction list =
   | Num n -> [ IMov (Reg RAX, Const n) ] 
   | _ -> failwith "TO BE DONE!"
 
-let compile e : string =
+let compile_prog p : string =
+  let defs, e = p in
   let instrs = compile_expr e in
   let prelude ="
 section .text

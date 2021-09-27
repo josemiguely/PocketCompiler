@@ -28,7 +28,7 @@ let test_parse_compound () =
     (Prim2 (Add, Prim2 (Add, Num 3L, Id "x"), Num 7L))
 
 let test_parse_error () =
-  let sexp = `List [`Atom "foo"; `Atom "bar"] in
+  let sexp = `List [`List [`Atom "foo"]; `Atom "bar"] in
   check_raises "Should raise failwith" 
     (Failure (Fmt.strf "Not a valid expr: %a" CCSexp.pp sexp))
     (fun () -> ignore @@ parse_exp sexp)
@@ -66,8 +66,8 @@ let () =
   let bbc_tests = 
     let compile_flags = Option.value (Sys.getenv_opt "CFLAGS") ~default:"-g" in
     let compiler : string -> out_channel -> unit = 
-      fun s o -> fprintf o "%s" (compile (parse_exp (sexp_from_string s))) in
+      fun s o -> fprintf o "%s" (compile_prog (parse_prog (sexp_from_string s))) in
     let oracle : string -> status * string = 
-      fun s -> NoError , string_of_val (interp (parse_exp (sexp_from_string s)) empty_env) in
+      fun s -> NoError , string_of_val (interp_prog (parse_prog (sexp_from_string s)) empty_env) in
     tests_from_dir ~compile_flags ~compiler ~oracle ~runtime:"rt/sys.c" "bbctests" in
   run "Tests entrega 1" (ocaml_tests @ bbc_tests)
