@@ -14,7 +14,22 @@ type expr =
   | Id of string
   | Let of string * expr * expr
   | If of expr * expr * expr
-  
+  | Apply of expr * expr list
+  | ApplyFF of string * expr list
+
+(* C function argument types *)
+type ctype =
+  | CAny
+  | CInt
+  | CBool
+
+(* Function definitions *)
+type fundef =
+  | Native of string * string list * expr
+  | Foreign of string * ctype list * ctype
+
+type prog = fundef list * expr
+
 (* Pretty printing - used by testing framework *)
 let rec string_of_expr(e : expr) : string = 
   match e with
@@ -32,3 +47,5 @@ let rec string_of_expr(e : expr) : string =
     | Lte -> "<=") (string_of_expr e1) (string_of_expr e2)
   | Let (x, e1, e2) -> sprintf "(let (%s %s) %s)" x (string_of_expr e1) (string_of_expr e2) 
   | If (e1, e2, e3) -> sprintf "(if %s %s %s)" (string_of_expr e1) (string_of_expr e2) (string_of_expr e3)
+  | Apply (fe, ael) -> sprintf "(%s %s)" (string_of_expr fe) (String.concat " " (List.map string_of_expr ael))
+  | ApplyFF (fn, ael) -> sprintf "(@sys %s %s)" fn (String.concat " " (List.map string_of_expr ael))
