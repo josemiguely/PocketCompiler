@@ -38,7 +38,7 @@ let test_interp_num () =
   check value "same int" (interp (Num 42L) empty_env) (NumV 42L)
 
 let test_interp_var () =
-  check value "same int" (interp (Id "x") ["x", NumV 7L]) (NumV 7L)
+  check value "same int" (interp (Id "x") (extend_var "x" (NumV 7L) empty_env)) (NumV 7L)
 
 let test_interp_compound () =
   check value "same int"
