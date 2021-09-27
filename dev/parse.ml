@@ -9,15 +9,16 @@ let rec parse_exp (sexp : sexp) : expr =
   | `Atom "false" -> Bool false
   | `Atom s -> (
     match Int64.of_string_opt s with Some n -> Num n | None -> Id s )
-  | `List (`Atom "@sys" :: `Atom name :: args) -> 
+  | `List (`Atom "@sys" :: `Atom name :: args) -> (
     match args with
     | [] -> failwith (sprintf "Invalid foreign function call: %s" (to_string sexp))
-    | _ -> ApplyFF (name, List.map parse_exp args)
+    | _ -> ApplyFF (name, List.map parse_exp args) )
   | `List [eop; e] -> (
     match eop with 
     | `Atom "add1" -> Prim1 (Add1, parse_exp e)
     | `Atom "sub1" -> Prim1 (Sub1, parse_exp e)
-    | _ -> Apply (parse_exp eop, [parse_exp e])
+    | `Atom fo_name -> ApplyFO (fo_name, [parse_exp e])
+    | _ -> failwith (sprintf "Not a valid expr: %s" (to_string sexp))
     )
   | `List [eop; e1; e2] -> (
     match eop with
@@ -28,10 +29,11 @@ let rec parse_exp (sexp : sexp) : expr =
     | `Atom "+" -> Prim2 (Add, parse_exp e1, parse_exp e2)
     | `Atom "and" -> Prim2 (And, parse_exp e1, parse_exp e2)
     | `Atom "<=" -> Prim2 (Lte, parse_exp e1, parse_exp e2)
-    | _ -> Apply (parse_exp eop, [parse_exp e1 ; parse_exp e2])
+    | `Atom fo_name -> ApplyFO (fo_name, [parse_exp e1 ; parse_exp e2])
+    | _ -> failwith (sprintf "Not a valid expr: %s" (to_string sexp))
     )
   | `List [`Atom "if"; e1; e2; e3] -> If (parse_exp e1, parse_exp e2, parse_exp e3)
-  | `List (e1 :: e2) -> Apply (parse_exp e1, List.map parse_exp e2)
+  | `List (`Atom fo_name :: e2) -> ApplyFO (fo_name, List.map parse_exp e2)
   | _ -> failwith (sprintf "Not a valid expr: %s" (to_string sexp))
 
 let rec parse_prog (sexp : sexp) : prog =
