@@ -65,7 +65,7 @@ and parse_c_type (sexp : sexp) : ctype =
   | `Atom "any" -> CAny
   | `Atom "int" -> CInt
   | `Atom "bool" -> CBool
-  | _ -> failwith (sprintf "Not a valid c type: %s" (to_string sexp))
+  | _ -> failwith (sprintf "Not a valid type declaration: %s" (to_string sexp))
 
 let sexp_from_file : string -> CCSexp.sexp =
  fun filename ->
