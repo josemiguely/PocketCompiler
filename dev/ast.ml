@@ -40,7 +40,8 @@ let rec string_of_expr(e : expr) : string =
   | Prim1 (op, e) -> sprintf "(%s %s)" 
     (match op with
     | Add1 -> "add1"
-    | Sub1 -> "sub1") (string_of_expr e)
+    | Sub1 -> "sub1"
+    | Print -> "print") (string_of_expr e)
   | Prim2 (op, e1, e2) -> sprintf "(%s %s %s)" 
     (match op with 
     | Add -> "+"
