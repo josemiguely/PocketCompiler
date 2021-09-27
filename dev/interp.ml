@@ -7,8 +7,8 @@ type value =
   BoolV of bool
 
 (** Declarations **)
-type native_fun = NativeFunction of (value list -> value)
-type foreign_fun = ForeignFunction of (value list -> value)
+type native_fun = NativeFunction of string list * expr
+type foreign_fun = ForeignFunction of ctype list * ctype * (value list -> value)
 
 (* Pretty printing *)
 let string_of_val(v : value) : string =
@@ -20,7 +20,16 @@ let string_of_nf(_: native_fun) : string = "< Native Function >"
 
 let string_of_ff(_: foreign_fun) : string = "< Foreign Function >"
 
-(* Lifting functions on OCaml primitive types to operate on language values *)
+(** Testing Foreign Functions **)
+let foreign_prelude = [
+  "print", 1, (
+    fun vls -> 
+      match vls with 
+      | v :: [] -> Printf.printf "%s" (string_of_val v) ; v
+      | _ -> failwith "Runtime error: Print expected 1 argument")
+  ]
+
+  (* Lifting functions on OCaml primitive types to operate on language values *)
 let liftIII : (int64 -> int64 -> int64) -> value -> value -> value =
   fun op e1 e2 ->
     match e1, e2 with
@@ -69,6 +78,13 @@ let concat_env : env -> env -> env =
   fun (nfs1, ffs1, vars1) (nfs2, ffs2, vars2) ->
     nfs1 @ nfs2, ffs1 @ ffs2, vars1 @ vars2
 
+let dynamic_typecheck =
+  fun (v, t) ->
+    match v, t with
+    | NumV _, CInt | BoolV _, CBool | _, CAny -> v
+    | NumV _, CBool -> failwith (Printf.sprintf "Runtime type error: Expected Bool but got Int %s" (string_of_val v))
+    | BoolV _, CInt -> failwith (Printf.sprintf "Runtime type error: Expected Int but got Bool %s" (string_of_val v))
+
 (* Lookup *)
 let lookup_var : string -> env -> value =
   fun x (_, _, vars) ->
@@ -102,33 +118,31 @@ let rec interp expr env =
     | BoolV b -> if b then interp e2 env else interp e3 env
     | _ -> failwith "runtime type error")
   | ApplyFO (name, ael) -> 
-    let NativeFunction fn = lookup_nf name env in
+    let NativeFunction (params, body) = lookup_nf name env in
     let vals = List.map (fun e -> interp e env) ael in
-    fn vals
+    let param_vals = List.combine params vals in
+    let env = List.fold_left (fun env (n, v) -> extend_var n v env) env param_vals in
+    interp body env
   | ApplyFF (name, ael) -> 
-    let ForeignFunction ff = lookup_ff name env in
-    let vals = List.map (fun e -> interp e env) ael in
-    ff vals
+    let ForeignFunction (arg_types, ret_type, f) = lookup_ff name env in
+    let val_types = List.combine (List.map (fun e -> interp e env) ael) arg_types in
+    let vals = List.map dynamic_typecheck val_types in
+    let result = f vals in
+    dynamic_typecheck (result, ret_type)
+      
 
 let interp_defs (defs : fundef list) : env =
   List.fold_left (
     fun env def ->
       match def with
       | Native (name, params, body) ->
-        let cls = (
-          fun vals ->
-            let param_vals = List.combine params vals in
-            let env = List.fold_left (fun env (n, v) -> extend_var n v env) env param_vals in
-            interp body env
-        ) in
-        extend_nfun name (NativeFunction cls) env
-      | Foreign (name, _, _) ->
-        let cls = (
-          fun _ ->
-            (* TODO: Foreign Functions and type checking *)
-            failwith "TO BE DONE!"
-        ) in
-        extend_ffun name (ForeignFunction cls) env
+        extend_nfun name (NativeFunction (params, body)) env
+      | Foreign (name, arg_types, ret_type) -> (
+        let arity = (List.length arg_types) in
+        let cls = List.find_opt (fun (n, a, _) -> (String.equal n name) && (arity == a)) foreign_prelude in
+        match cls with
+        | Some (_, _, f) -> extend_ffun name (ForeignFunction (arg_types, ret_type, f)) env
+        | None -> failwith (Printf.sprintf "Compile error: Foreign Function %s of arity %d doesn't exist" name (List.length arg_types) ) )
     ) empty_env defs
 
 let interp_prog prog env =
