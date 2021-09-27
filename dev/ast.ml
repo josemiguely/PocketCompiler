@@ -2,7 +2,7 @@
 open Printf
 
 (* primitive operators *)
-type prim1 = Add1 | Sub1
+type prim1 = Add1 | Sub1 | Print
 type prim2 = Add | And | Lte 
 
 (* Algebraic datatype for expressions *)

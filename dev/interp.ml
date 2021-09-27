@@ -86,10 +86,11 @@ let rec interp expr env =
   | Id x -> lookup_var x env
   | Num n -> NumV n
   | Bool b -> BoolV b
-  | Prim1 (op, e) -> 
-    (match op with
-    | Add1 -> liftIII ( Int64.add )
-    | Sub1 -> liftIII ( Int64.sub )) (interp e env) (NumV 1L)
+  | Prim1 (op, e) -> (
+    match op with
+    | Add1 -> liftIII ( Int64.add ) (interp e env) (NumV 1L)
+    | Sub1 -> liftIII ( Int64.sub ) (interp e env) (NumV 1L)
+    | Print -> (interp (ApplyFF ("print", [e])) env) )
   | Prim2 (op, e1, e2) -> 
     (match op with
     | Add -> liftIII ( Int64.add ) 
