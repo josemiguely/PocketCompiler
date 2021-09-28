@@ -1,7 +1,7 @@
 open Dev.Ast
 open Dev.Parse
-open Dev.Interp
 open Dev.Compile
+open Dev.Interp
 open Alcotest
 open Bbctester.Test
 open Printf
