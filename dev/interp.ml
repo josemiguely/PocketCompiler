@@ -22,7 +22,7 @@ let foreign_func_prelude : (string * int * (value list -> value)) list = [
   "print", 1, (
     fun vls -> 
       match vls with 
-      | v :: [] -> Printf.printf "%s" (string_of_val v) ; v
+      | v :: [] -> Printf.printf "> %s" (string_of_val v) ; v
       | _ -> failwith "Runtime error: Print expected 1 argument"
     ) ;
   (* Next Function as name, arity, *)
