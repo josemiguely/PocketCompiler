@@ -67,8 +67,8 @@ let test_parse_compound () =
 
 let test_parse_error () =
   let sexp = `List [`List [`Atom "foo"]; `Atom "bar"] in
-  check_raises "Should raise failwith" 
-    (Failure (Fmt.strf "Not a valid expr: %a" CCSexp.pp sexp))
+  check_raises "Should raise a parse error" 
+    (ParseError (Fmt.strf "Not a valid expr: %a" CCSexp.pp sexp))
     (fun () -> ignore @@ parse_exp sexp)
 
 (* Tests for our [interp] function *)
@@ -180,18 +180,18 @@ let test_interp_compound () =
 let test_error_III () =
   let v = (fun () -> ignore @@ interp (Prim2 (Add, Bool true,  Num (-1L))) empty_env empty_fenv) in 
   check_raises "incorrect addition" 
-  (Failure "Runtime type error: Expected two integers, but got true and -1") v
+  (TypeError "Expected two integers, but got true and -1") v
 
 
 let test_error_BBB () =
   let v = (fun () -> ignore @@ (interp (Prim2 (And, Num 5L, Bool false))) empty_env empty_fenv) in 
   check_raises "incorrect conjunction"
-  (Failure "Runtime type error: Expected two booleans, but got 5 and false") v
+  (TypeError "Expected two booleans, but got 5 and false") v
 
 let test_error_IIB () =
   let v = (fun () -> ignore @@ (interp (Prim2 (Lte, Bool true, Num 10L))) empty_env empty_fenv) in 
   check_raises  "incorrect lesser comparison" 
-  (Failure "Runtime type error: Expected two integers, but got true and 10") v
+  (TypeError "Expected two integers, but got true and 10") v
 
 (* OCaml tests: extend with your own tests *)
 let ocaml_tests = [
@@ -249,10 +249,11 @@ let () =
         try
           NoError, string_of_val (interp_prog (parse_prog (sexp_from_string s)) empty_env)
         with
-        | Failure msg -> 
-          let re = Str.regexp_string "Runtime" in
-          try ignore (Str.search_forward re msg 0); RTError, msg
-          with Not_found -> CTError, msg
+        | TypeError msg -> RTError, msg
+        | ParseError msg
+        | ArityError msg
+        | UnboundIdentifierError msg
+        | UndefinedFunctionError msg -> CTError, msg
         |  e -> RTError, "Oracle raised an unknown error :"^ Printexc.to_string e 
       )
     ) in
