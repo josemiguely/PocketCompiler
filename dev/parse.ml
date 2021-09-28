@@ -3,7 +3,7 @@ open Ast
 open Printf
 open CCSexp
 
-exception ParseError of string
+exception CTError of string
 
 let rec parse_exp (sexp : sexp) : expr =
   match sexp with
@@ -17,23 +17,23 @@ let rec parse_exp (sexp : sexp) : expr =
     | `Atom "sub1" -> Prim1 (Sub1, parse_exp e)
     | `Atom "print" -> Prim1 (Print, parse_exp e)  (* comment out this line if providing print via the sys interface *)
     | `Atom name -> Apply (name, [parse_exp e])
-    | _ -> raise (ParseError (sprintf "Not a valid expr: %s" (to_string sexp)))
+    | _ -> raise (CTError (sprintf "Not a valid expr: %s" (to_string sexp)))
     )
   | `List [eop; e1; e2] -> (
     match eop with
     | `Atom "let" -> (
       match e1 with
       | `List [`Atom id; e] -> Let (id, parse_exp e, parse_exp e2)
-      | _ -> raise (ParseError (sprintf "Not a valid let assignment: %s" (to_string e1))) )
+      | _ -> raise (CTError (sprintf "Not a valid let assignment: %s" (to_string e1))) )
     | `Atom "+" -> Prim2 (Add, parse_exp e1, parse_exp e2)
     | `Atom "and" -> Prim2 (And, parse_exp e1, parse_exp e2)
     | `Atom "<=" -> Prim2 (Lte, parse_exp e1, parse_exp e2)
     | `Atom name -> Apply (name, [parse_exp e1 ; parse_exp e2])
-    | _ -> raise (ParseError (sprintf "Not a valid expr: %s" (to_string sexp)))
+    | _ -> raise (CTError (sprintf "Not a valid expr: %s" (to_string sexp)))
     )
   | `List [`Atom "if"; e1; e2; e3] -> If (parse_exp e1, parse_exp e2, parse_exp e3)
   | `List (`Atom name :: e2) -> Apply (name, List.map parse_exp e2)
-  | _ -> raise (ParseError (sprintf "Not a valid expr: %s" (to_string sexp)))
+  | _ -> raise (CTError (sprintf "Not a valid expr: %s" (to_string sexp)))
 
 let rec parse_prog (sexp : sexp) : prog =
   match sexp with
@@ -50,7 +50,7 @@ let rec parse_prog (sexp : sexp) : prog =
         let arg_types = List.map parse_c_type (List.rev args) in
         let ret_type = parse_c_type ret in
         [ DefSys (name, arg_types, ret_type) ] @ funcdefs, expr
-      | _ -> raise (ParseError (sprintf "Not a valid type declaration: %s" (to_string (`List arg_spec))))
+      | _ -> raise (CTError (sprintf "Not a valid type declaration: %s" (to_string (`List arg_spec))))
       )
     | _, [] -> [], parse_exp hd
     | _ -> [], parse_exp sexp
@@ -60,22 +60,22 @@ let rec parse_prog (sexp : sexp) : prog =
 and parse_arg_name (sexp : sexp) : string =
   match sexp with
   | `Atom name -> name
-  | _ -> raise (ParseError (sprintf "Not a valid argument name: %s" (to_string sexp)))
+  | _ -> raise (CTError (sprintf "Not a valid argument name: %s" (to_string sexp)))
 
 and parse_c_type (sexp : sexp) : ctype =
   match sexp with
   | `Atom "any" -> CAny
   | `Atom "int" -> CInt
   | `Atom "bool" -> CBool
-  | _ -> raise (ParseError (sprintf "Not a valid type declaration: %s" (to_string sexp)))
+  | _ -> raise (CTError (sprintf "Not a valid type declaration: %s" (to_string sexp)))
 
 let sexp_from_file : string -> CCSexp.sexp =
  fun filename ->
   match CCSexp.parse_file filename with
   | Ok s -> s
-  | Error msg -> raise (ParseError (sprintf "Unable to parse file %s: %s" filename msg))
+  | Error msg -> raise (CTError (sprintf "Unable to parse file %s: %s" filename msg))
 
 let sexp_from_string (src : string) : CCSexp.sexp =
   match CCSexp.parse_string src with
   | Ok s -> s
-  | Error msg -> raise (ParseError (sprintf "Unable to parse string %s: %s" src msg))
+  | Error msg -> raise (CTError (sprintf "Unable to parse string %s: %s" src msg))

@@ -1,10 +1,7 @@
 (** Interpreter **)
 open Ast
 
-exception TypeError of string
-exception ArityError of string
-exception UnboundIdentifierError of string
-exception UndefinedFunctionError of string
+exception RTError of string
 
 (** Values **)
 type value = 
@@ -22,19 +19,19 @@ let liftIII : (int64 -> int64 -> int64) -> value -> value -> value =
   fun op e1 e2 ->
     match e1, e2 with
     | NumV n1, NumV n2 -> NumV (op n1 n2)
-    | _ -> raise (TypeError (Printf.sprintf "Expected two integers, but got %s and %s" (string_of_val e1) (string_of_val e2)))
+    | _ -> raise (RTError (Printf.sprintf "Expected two integers, but got %s and %s" (string_of_val e1) (string_of_val e2)))
 
 let liftBBB : (bool -> bool -> bool) -> value -> value -> value =
   fun op e1 e2 ->
     match e1, e2 with
     | BoolV b1, BoolV b2 -> BoolV (op b1 b2)
-    | _ -> raise (TypeError (Printf.sprintf "Expected two booleans, but got %s and %s" (string_of_val e1) (string_of_val e2)))
+    | _ -> raise (RTError (Printf.sprintf "Expected two booleans, but got %s and %s" (string_of_val e1) (string_of_val e2)))
 
 let liftIIB : (int64 -> int64 -> bool) -> value -> value -> value =
   fun op e1 e2 ->
     match e1, e2 with
     | NumV n1, NumV n2 -> BoolV (op n1 n2)
-    | _ -> raise (TypeError (Printf.sprintf "Expected two integers, but got %s and %s" (string_of_val e1) (string_of_val e2)))
+    | _ -> raise (RTError (Printf.sprintf "Expected two integers, but got %s and %s" (string_of_val e1) (string_of_val e2)))
 
   
 (* Sys functions *)
@@ -55,7 +52,7 @@ let lookup_env : string -> env -> value =
   fun s env ->
     match List.assoc_opt s env with
     | Some v -> v
-    | None -> raise (UnboundIdentifierError (Printf.sprintf "Unbound identifier: %s" s))
+    | None -> raise (RTError (Printf.sprintf "Unbound identifier: %s" s))
 
 (* Function Environment *)
 type fenv = fundef list
@@ -63,26 +60,26 @@ let empty_fenv : fenv = []
 let rec lookup_fenv : string -> fenv -> fundef =
   fun s fenv -> 
     match fenv with
-    | [] -> raise (UndefinedFunctionError (Printf.sprintf "Undefined function: %s" s))
+    | [] -> raise (RTError (Printf.sprintf "Undefined function: %s" s))
     | (f::fs) -> if fundef_name f = s then f else lookup_fenv s fs
 
 (* check that the value is of the given type, return the value if ok *)
 let check_type (t : ctype) (v : value) : value =
     match v, t with
     | NumV _, CInt | BoolV _, CBool | _, CAny -> v
-    | NumV _, CBool -> raise (TypeError (Printf.sprintf "Expected boolean but got %s" (string_of_val v)))
-    | BoolV _, CInt -> raise (TypeError (Printf.sprintf "Expected integer but got %s" (string_of_val v)))
+    | NumV _, CBool -> raise (RTError (Printf.sprintf "Expected boolean but got %s" (string_of_val v)))
+    | BoolV _, CInt -> raise (RTError (Printf.sprintf "Expected integer but got %s" (string_of_val v)))
 
 (* provide a dummy (non-C) interpretation of sys functions print and max *)
 let interp_sys name vals = 
   match name with
   | "print" -> (match vals with 
                 | v :: [] -> Printf.printf "> %s\n" (string_of_val v) ; v
-                | _ -> raise (ArityError "Function print expected 1 argument"))
+                | _ -> raise (RTError "Function print expected 1 argument"))
   | "max" -> (match vals with
                 | NumV n1 :: NumV n2 :: [] -> NumV (if n1 >= n2 then n1 else n2)
-                | _ -> raise (ArityError "Function max expected 2 integer arguments"))
-  | _ -> raise (UndefinedFunctionError (Printf.sprintf "Undefined sys function: %s" name))
+                | _ -> raise (RTError "Function max expected 2 integer arguments"))
+  | _ -> raise (RTError (Printf.sprintf "Undefined sys function: %s" name))
 
 (* interpreter *)
 let rec interp expr env fenv =
@@ -104,7 +101,7 @@ let rec interp expr env fenv =
   | If (e1, e2, e3) -> 
     (match interp e1 env fenv with
     | BoolV b -> interp (if b then e2 else e3) env fenv
-    | e -> raise (TypeError (Printf.sprintf "Expected boolean, but got %s" (string_of_val e))) )
+    | e -> raise (RTError (Printf.sprintf "Expected boolean, but got %s" (string_of_val e))) )
   | Apply (name, args) -> 
     let vals = List.map (fun e -> interp e env fenv) args in
     (match lookup_fenv name fenv with
