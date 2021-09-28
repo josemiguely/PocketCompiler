@@ -14,8 +14,7 @@ type expr =
   | Id of string
   | Let of string * expr * expr
   | If of expr * expr * expr
-  | ApplyFO of string * expr list
-  | ApplyFF of string * expr list
+  | Apply of string * expr list
 
 (* C function argument types *)
 type ctype =
@@ -24,12 +23,12 @@ type ctype =
   | CBool
 
 (* Function definitions *)
-type fundef =
-  | Native of string * string list * expr
-  | Foreign of string * ctype list * ctype
+type funcdef =
+  | DefFun of string * string list * expr
+  | DefSys of string * ctype list * ctype
 
 (* Program including definitions and a body *)
-type prog = fundef list * expr
+type prog = funcdef list * expr
 
 (* Pretty printing expressions - used by testing framework *)
 let rec string_of_expr(e : expr) : string = 
@@ -49,8 +48,7 @@ let rec string_of_expr(e : expr) : string =
     | Lte -> "<=") (string_of_expr e1) (string_of_expr e2)
   | Let (x, e1, e2) -> sprintf "(let (%s %s) %s)" x (string_of_expr e1) (string_of_expr e2) 
   | If (e1, e2, e3) -> sprintf "(if %s %s %s)" (string_of_expr e1) (string_of_expr e2) (string_of_expr e3)
-  | ApplyFO (fe, ael) -> sprintf "(%s %s)" fe (String.concat " " (List.map string_of_expr ael))
-  | ApplyFF (fn, ael) -> sprintf "(@sys %s %s)" fn (String.concat " " (List.map string_of_expr ael))
+  | Apply (fe, ael) -> sprintf "(%s %s)" fe (String.concat " " (List.map string_of_expr ael))
 
 (* Pretty printing C types - used by testing framework *)
 let string_of_ctype(t : ctype) : string =
@@ -60,12 +58,12 @@ match t with
 | CBool -> "bool"
 
 (* Pretty printing function definitions - used by testing framework *)
-let string_of_fundef(d : fundef) : string =
+let string_of_funcdef(d : funcdef) : string =
   match d with
-  | Native (name, arg_ids, body) -> sprintf "(def (%s %s) %s)" name (String.concat " " arg_ids) (string_of_expr body)
-  | Foreign (name, arg_types, ret_type) -> sprintf "(defsys %s %s -> %s)" name (String.concat " " (List.map string_of_ctype arg_types)) (string_of_ctype ret_type)
+  | DefFun (name, arg_ids, body) -> sprintf "(def (%s %s) %s)" name (String.concat " " arg_ids) (string_of_expr body)
+  | DefSys (name, arg_types, ret_type) -> sprintf "(defsys %s %s -> %s)" name (String.concat " " (List.map string_of_ctype arg_types)) (string_of_ctype ret_type)
 
 (* Pretty printing a program - used by testing framework *)
 let string_of_prog(p : prog) : string =
-  let fundefs, body = p in
-  String.concat "\n" ((List.map string_of_fundef fundefs) @ [string_of_expr body])
+  let funcdefs, body = p in
+  String.concat "\n" ((List.map string_of_funcdef funcdefs) @ [string_of_expr body])
