@@ -76,7 +76,7 @@ let test_interp_num () =
   check value "same int" (interp (Num 42L) empty_env empty_fenv) (NumV 42L)
 
 let test_interp_var () =
-  check value "same int" (interp (Id "x") (extend_env "x" (NumV 7L) empty_env) empty_fenv) (NumV 7L)
+  check value "same int" (interp (Id "x") (extend_env ["x"] [(NumV 7L)] empty_env) empty_fenv) (NumV 7L)
 
 let test_interp_bool () =
   let v = (interp (Bool true) empty_env empty_fenv) in check value "same bool" v 

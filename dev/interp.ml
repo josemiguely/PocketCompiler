@@ -41,12 +41,10 @@ let defs_prelude : fundef list = [
 (* Lexical Environment *)
 type env = (string * value) list
 let empty_env : env = []
-let extend_env : string -> value -> env -> env =
-  fun s v env -> (s, v) :: env
 
-let multi_extend_env (names : string list) (vals : value list) (env : env) : env =
+let extend_env (names : string list) (vals : value list) (env : env) : env =
   let param_vals = List.combine names vals in
-  List.fold_left (fun env (n, v) -> extend_env n v env) env param_vals
+  List.fold_left (fun env p -> p :: env) env param_vals
 
 let lookup_env : string -> env -> value =
   fun s env ->
@@ -97,7 +95,7 @@ let rec interp expr env fenv =
     | Add -> liftIII ( Int64.add ) 
     | And -> liftBBB ( && ) 
     | Lte -> liftIIB ( <= )) (interp e1 env fenv) (interp e2 env fenv)
-  | Let (x, e , b) -> interp b (extend_env x (interp e env fenv) env) fenv
+  | Let (x, e , b) -> interp b (extend_env [x] [(interp e env fenv)] env) fenv
   | If (e1, e2, e3) -> 
     (match interp e1 env fenv with
     | BoolV b -> interp (if b then e2 else e3) env fenv
@@ -106,7 +104,7 @@ let rec interp expr env fenv =
     let vals = List.map (fun e -> interp e env fenv) args in
     (match lookup_fenv name fenv with
     | DefFun (_, params, body) -> 
-      interp body (multi_extend_env params vals env) fenv
+      interp body (extend_env params vals env) fenv
     | DefSys (_, arg_types, ret_type) ->
       check_type ret_type @@ interp_sys name (List.map2 check_type arg_types vals))
 
