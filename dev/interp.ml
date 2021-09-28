@@ -22,30 +22,43 @@ let foreign_func_prelude : (string * int * (value list -> value)) list = [
   "print", 1, (
     fun vls -> 
       match vls with 
-      | v :: [] -> Printf.printf "> %s" (string_of_val v) ; v
-      | _ -> failwith "Runtime error: Print expected 1 argument"
+      | v :: [] -> Printf.printf "> %s\n" (string_of_val v) ; v
+      | _ -> failwith "Runtime error: print expected 1 argument"
     ) ;
-  (* Next Function as name, arity, *)
+  "max", 2, (
+    fun vls ->
+      match vls with
+      | NumV n1 :: NumV n2 :: [] -> NumV (if n1 >= n2 then n1 else n2)
+      | _ -> failwith "Runtime error: max expected 2 integer arguments"
+  )
+  (* Next Foreign Function as name, arity, lambda *)
   ]
+
+let defs_prelude : funcdef list = [
+  DefSys ("print", [CAny], CAny) ;
+  DefSys ("max", [CInt ; CInt], CInt) ;
+  (* Next Function Definition as name and either 
+    types for Foreign or parameters/body for local *)
+]
 
   (* Lifting functions on OCaml primitive types to operate on language values *)
 let liftIII : (int64 -> int64 -> int64) -> value -> value -> value =
   fun op e1 e2 ->
     match e1, e2 with
     | NumV n1, NumV n2 -> NumV (op n1 n2)
-    | _ -> failwith "runtime type error"
+    | _ -> failwith (Printf.sprintf "Runtime type error: Expected two integers, but got %s and %s" (string_of_val e1) (string_of_val e2))
 
 let liftBBB : (bool -> bool -> bool) -> value -> value -> value =
   fun op e1 e2 ->
     match e1, e2 with
     | BoolV b1, BoolV b2 -> BoolV (op b1 b2)
-    | _ -> failwith "runtime type error"    
+    | _ -> failwith (Printf.sprintf "Runtime type error: Expected two booleans, but got %s and %s" (string_of_val e1) (string_of_val e2))
 
 let liftIIB : (int64 -> int64 -> bool) -> value -> value -> value =
   fun op e1 e2 ->
     match e1, e2 with
     | NumV n1, NumV n2 -> BoolV (op n1 n2)
-    | _ -> failwith "runtime type error"
+    | _ -> failwith (Printf.sprintf "Runtime type error: Expected two integers, but got %s and %s" (string_of_val e1) (string_of_val e2))
 
 (* Lexic Environment *)
 type env = (string * value) list
@@ -58,7 +71,9 @@ let extend_env : string -> value -> env -> env =
     (s, v) :: env
 let lookup_env : string -> env -> value =
   fun s env ->
-    List.assoc s env
+    match List.assoc_opt s env with
+    | Some v -> v
+    | None -> failwith (Printf.sprintf "No %s variable exists" s)
 
 (* Function Environment *)
 type fenv = (string * func) list
@@ -71,14 +86,16 @@ let extend_fenv : string -> func -> fenv -> fenv =
     (s, v) :: fenv
 let lookup_fenv : string -> fenv -> func =
   fun s fenv ->
-    List.assoc s fenv
+    match List.assoc_opt s fenv with
+    | Some f -> f
+    | None -> failwith (Printf.sprintf "No %s function exists" s)
 
 let dynamic_typecheck : value * ctype -> value =
   fun (v, t) ->
     match v, t with
     | NumV _, CInt | BoolV _, CBool | _, CAny -> v
-    | NumV _, CBool -> failwith (Printf.sprintf "Runtime type error: Expected Bool but got Int %s" (string_of_val v))
-    | BoolV _, CInt -> failwith (Printf.sprintf "Runtime type error: Expected Int but got Bool %s" (string_of_val v))
+    | NumV _, CBool -> failwith (Printf.sprintf "Runtime type error: Expected boolean but got %s" (string_of_val v))
+    | BoolV _, CInt -> failwith (Printf.sprintf "Runtime type error: Expected integer but got %s" (string_of_val v))
 
 (* interpreter *)
 let rec interp expr env fenv =
@@ -100,7 +117,7 @@ let rec interp expr env fenv =
   | If (e1, e2, e3) -> 
     (match interp e1 env fenv with
     | BoolV b -> interp (if b then e2 else e3) env fenv
-    | _ -> failwith "runtime type error")
+    | e -> failwith (Printf.sprintf "Runtime type error: Expected boolean, but got %s" (string_of_val e)) )
   | Apply (name, e_list) -> 
     (match lookup_fenv name fenv with
     | Fun (params, body) -> 
@@ -115,19 +132,19 @@ let rec interp expr env fenv =
       dynamic_typecheck (result, ret_type) )
 
 let prepare_defs (defs : funcdef list) : fenv =
-  List.filter_map (
+  List.map (
     fun def ->
       match def with
-      | DefFun (name, params, body) -> Some (name, Fun (params, body))
+      | DefFun (name, params, body) -> (name, Fun (params, body))
       | DefSys (name, arg_types, ret_type) -> (
         let arity = (List.length arg_types) in
         let cls = List.find_opt (fun (n, a, _) -> (String.equal n name) && (arity == a)) foreign_func_prelude in
         match cls with
-        | Some (_, _, lambda) -> Some (name, Sys (arg_types, ret_type, lambda)) 
-        | None -> None )
+        | Some (_, _, lambda) -> (name, Sys (arg_types, ret_type, lambda)) 
+        | None -> failwith (Printf.sprintf "No %s function exists with arity %d" name arity) )
   ) defs
 
 let interp_prog prog env =
   let defs, expr = prog in
-  let fenv = concat_fenv (prepare_defs defs) empty_fenv in
+  let fenv = concat_fenv (prepare_defs (defs_prelude @ defs)) empty_fenv in
   interp expr env fenv
