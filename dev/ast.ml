@@ -23,12 +23,12 @@ type ctype =
   | CBool
 
 (* Function definitions *)
-type funcdef =
+type fundef =
   | DefFun of string * string list * expr
   | DefSys of string * ctype list * ctype
 
 (* Program including definitions and a body *)
-type prog = funcdef list * expr
+type prog = fundef list * expr
 
 (* Pretty printing expressions - used by testing framework *)
 let rec string_of_expr(e : expr) : string = 
@@ -58,12 +58,12 @@ match t with
 | CBool -> "bool"
 
 (* Pretty printing function definitions - used by testing framework *)
-let string_of_funcdef(d : funcdef) : string =
+let string_of_fundef(d : fundef) : string =
   match d with
   | DefFun (name, arg_ids, body) -> sprintf "(def (%s %s) %s)" name (String.concat " " arg_ids) (string_of_expr body)
   | DefSys (name, arg_types, ret_type) -> sprintf "(defsys %s %s -> %s)" name (String.concat " " (List.map string_of_ctype arg_types)) (string_of_ctype ret_type)
 
 (* Pretty printing a program - used by testing framework *)
 let string_of_prog(p : prog) : string =
-  let funcdefs, body = p in
-  String.concat "\n" ((List.map string_of_funcdef funcdefs) @ [string_of_expr body])
+  let fundefs, body = p in
+  String.concat "\n" ((List.map string_of_fundef fundefs) @ [string_of_expr body])

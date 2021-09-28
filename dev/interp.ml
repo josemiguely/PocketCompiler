@@ -6,42 +6,13 @@ type value =
   | NumV of int64
   | BoolV of bool
 
-(** Declarations **)
-type func =
-  | Fun of string list * expr
-  | Sys of ctype list * ctype * (value list -> value)
-
 (* Pretty printing *)
 let string_of_val(v : value) : string =
-  match v with
-  | NumV n -> Int64.to_string n
-  | BoolV b -> if b then "true" else "false"
+match v with
+| NumV n -> Int64.to_string n
+| BoolV b -> if b then "true" else "false"
 
-(** Testing Sys Functions **)
-let sys_func_prelude : (string * int * (value list -> value)) list = [
-  "print", 1, (
-    fun vls -> 
-      match vls with 
-      | v :: [] -> Printf.printf "> %s\n" (string_of_val v) ; v
-      | _ -> failwith "Runtime error: print expected 1 argument"
-    ) ;
-  "max", 2, (
-    fun vls ->
-      match vls with
-      | NumV n1 :: NumV n2 :: [] -> NumV (if n1 >= n2 then n1 else n2)
-      | _ -> failwith "Runtime error: max expected 2 integer arguments"
-  )
-  (* Next Foreign Function as name, arity, lambda *)
-  ]
-
-let defs_prelude : funcdef list = [
-  DefSys ("print", [CAny], CAny) ;
-  DefSys ("max", [CInt ; CInt], CInt) ;
-  (* Next Function Definition as name and either 
-    types for Foreign or parameters/body for local *)
-]
-
-  (* Lifting functions on OCaml primitive types to operate on language values *)
+(* Lifting functions on OCaml primitive types to operate on language values *)
 let liftIII : (int64 -> int64 -> int64) -> value -> value -> value =
   fun op e1 e2 ->
     match e1, e2 with
@@ -60,37 +31,63 @@ let liftIIB : (int64 -> int64 -> bool) -> value -> value -> value =
     | NumV n1, NumV n2 -> BoolV (op n1 n2)
     | _ -> failwith (Printf.sprintf "Runtime type error: Expected two integers, but got %s and %s" (string_of_val e1) (string_of_val e2))
 
-(* Lexic Environment *)
+
+(** global (first-order) functions: can be either
+    - a source function, characterized by its arguments, and body expression
+    - an external ("sys") function, defined in C, characterized by its C argument types, 
+      return type, and executor function
+    These values live in a function environment, indexed by their name
+**)
+type func =
+  | Fun of string list * expr
+  | Sys of ctype list * ctype * (value list -> value)
+
+  
+(* Sys functions *)
+let defs_prelude : fundef list = [
+  DefSys ("print", [CAny], CAny) ;
+  DefSys ("max", [CInt ; CInt], CInt) 
+]
+(* Fake (non-C) implementations of sys functions (for testing the interpreter) *)
+let sys_func_prelude : (string * int * (value list -> value)) list = [
+  "print", 1, (
+    fun vls -> 
+      match vls with 
+      | v :: [] -> Printf.printf "> %s\n" (string_of_val v) ; v
+      | _ -> failwith "Runtime error: print expected 1 argument"
+    ) ;
+  "max", 2, (
+    fun vls ->
+      match vls with
+      | NumV n1 :: NumV n2 :: [] -> NumV (if n1 >= n2 then n1 else n2)
+      | _ -> failwith "Runtime error: max expected 2 integer arguments"
+  )
+]
+
+
+(* Lexical Environment *)
 type env = (string * value) list
 let empty_env : env = []
-let concat_env : env -> env -> env =
-  fun env1 env2 ->
-    env1 @ env2
 let extend_env : string -> value -> env -> env =
-  fun s v env ->
-    (s, v) :: env
+  fun s v env -> (s, v) :: env
 let lookup_env : string -> env -> value =
   fun s env ->
     match List.assoc_opt s env with
     | Some v -> v
-    | None -> failwith (Printf.sprintf "No %s variable exists" s)
+    | None -> failwith (Printf.sprintf "Unbound identifier: %s" s)
 
 (* Function Environment *)
 type fenv = (string * func) list
 let empty_fenv : fenv = []
-let concat_fenv : fenv -> fenv -> fenv =
-  fun fenv1 fenv2 ->
-    fenv1 @ fenv2
 let extend_fenv : string -> func -> fenv -> fenv =
-  fun s v fenv ->
-    (s, v) :: fenv
+  fun s v fenv -> (s, v) :: fenv
 let lookup_fenv : string -> fenv -> func =
   fun s fenv ->
     match List.assoc_opt s fenv with
     | Some f -> f
-    | None -> failwith (Printf.sprintf "No %s function exists" s)
+    | None -> failwith (Printf.sprintf "Undefined function: %s" s)
 
-let dynamic_typecheck : value * ctype -> value =
+let check_types : value * ctype -> value =
   fun (v, t) ->
     match v, t with
     | NumV _, CInt | BoolV _, CBool | _, CAny -> v
@@ -127,11 +124,11 @@ let rec interp expr env fenv =
       interp body env fenv
     | Sys (arg_types, ret_type, lambda) -> 
       let val_types = List.combine (List.map (fun e -> interp e env fenv) e_list) arg_types in
-      let vals = List.map dynamic_typecheck val_types in
+      let vals = List.map check_types val_types in
       let result = lambda vals in
-      dynamic_typecheck (result, ret_type) )
+      check_types (result, ret_type))
 
-let prepare_defs (defs : funcdef list) : fenv =
+let prepare_defs (defs : fundef list) : fenv =
   List.map (
     fun def ->
       match def with
@@ -141,10 +138,10 @@ let prepare_defs (defs : funcdef list) : fenv =
         let cls = List.find_opt (fun (n, a, _) -> (String.equal n name) && (arity == a)) sys_func_prelude in
         match cls with
         | Some (_, _, lambda) -> (name, Sys (arg_types, ret_type, lambda)) 
-        | None -> failwith (Printf.sprintf "No %s function exists with arity %d" name arity) )
+        | None -> failwith (Printf.sprintf "No %s function exists with arity %d" name arity))
   ) defs
 
 let interp_prog prog env =
   let defs, expr = prog in
-  let fenv = concat_fenv (prepare_defs (defs_prelude @ defs)) empty_fenv in
+  let fenv = prepare_defs (defs_prelude @ defs) in
   interp expr env fenv
