@@ -2,7 +2,8 @@
 open Printf
 
 (* primitive operators *)
-type prim1 = Add1 | Sub1 | Print
+type prim1 = Add1 | Sub1 
+| Print (* comment out this line if providing print via the sys interface *)
 type prim2 = Add | And | Lte 
 
 (* Algebraic datatype for expressions *)
@@ -27,6 +28,11 @@ type fundef =
   | DefFun of string * string list * expr
   | DefSys of string * ctype list * ctype
 
+let fundef_name(f : fundef) : string =
+  match f with
+  | DefFun (n, _, _) -> n
+  | DefSys (n, _, _) -> n
+
 (* Program including definitions and a body *)
 type prog = fundef list * expr
 
@@ -40,7 +46,7 @@ let rec string_of_expr(e : expr) : string =
     (match op with
     | Add1 -> "add1"
     | Sub1 -> "sub1"
-    | Print -> "print") (string_of_expr e)
+    | Print -> "print") (string_of_expr e) (* remove the print case when providing the sys interface *)
   | Prim2 (op, e1, e2) -> sprintf "(%s %s %s)" 
     (match op with 
     | Add -> "+"
@@ -49,6 +55,9 @@ let rec string_of_expr(e : expr) : string =
   | Let (x, e1, e2) -> sprintf "(let (%s %s) %s)" x (string_of_expr e1) (string_of_expr e2) 
   | If (e1, e2, e3) -> sprintf "(if %s %s %s)" (string_of_expr e1) (string_of_expr e2) (string_of_expr e3)
   | Apply (fe, ael) -> sprintf "(%s %s)" fe (String.concat " " (List.map string_of_expr ael))
+
+
+(** functions below are not used, would be used if testing the parser on defs **)
 
 (* Pretty printing C types - used by testing framework *)
 let string_of_ctype(t : ctype) : string =

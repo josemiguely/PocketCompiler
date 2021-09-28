@@ -7,7 +7,7 @@ let rec compile_expr (e : expr) : instruction list =
   | _ -> failwith "TO BE DONE!"
 
 let compile_prog p : string =
-  let defs, e = p in
+  let _, e = p in
   let instrs = compile_expr e in
   let prelude ="
 section .text
