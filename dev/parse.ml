@@ -36,12 +36,12 @@ let rec parse_exp (sexp : sexp) : expr =
 let rec parse_prog (sexp : sexp) : prog =
   match sexp with
   | `List (hd :: tl) -> (
-    match hd with
-    | `List [`Atom "def" ; `List (`Atom name :: args) ; body] ->
+    match hd, tl with
+    | `List [`Atom "def" ; `List (`Atom name :: args) ; body], _ ->
       let (funcdefs, expr) = parse_prog (`List tl) in
       let arg_names = List.map parse_arg_name args in
       [ DefFun (name, arg_names, parse_exp body) ] @ funcdefs, expr
-    | `List (`Atom "defsys" :: `Atom name :: arg_spec) -> (
+    | `List (`Atom "defsys" :: `Atom name :: arg_spec), _ -> (
       match List.rev arg_spec with
       | (ret :: `Atom "->" :: args) -> 
         let (funcdefs, expr) = parse_prog (`List tl) in
@@ -49,7 +49,8 @@ let rec parse_prog (sexp : sexp) : prog =
         let ret_type = parse_c_type ret in
         [ DefSys (name, arg_types, ret_type) ] @ funcdefs, expr
       | _ -> failwith (sprintf "Not a valid type declaration: %s" (to_string (`List arg_spec)))
-    )
+      )
+    | _, [] -> [], parse_exp hd
     | _ -> [], parse_exp sexp
   )
   | _ -> [], parse_exp sexp
