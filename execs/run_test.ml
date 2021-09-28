@@ -176,6 +176,23 @@ let test_interp_compound () =
     (interp (Prim2 (Add, Prim2 (Add, Num 3L, (Prim1 (Sub1, Num 6L))), Num 12L)) empty_env empty_fenv)
     (NumV 20L)
 
+
+let test_error_III () =
+  let v = (fun () -> ignore @@ interp (Prim2 (Add, Bool true,  Num (-1L))) empty_env empty_fenv) in 
+  check_raises "incorrect addition" 
+  (Failure "Runtime type error: Expected two integers, but got true and -1") v
+
+
+let test_error_BBB () =
+  let v = (fun () -> ignore @@ (interp (Prim2 (And, Num 5L, Bool false))) empty_env empty_fenv) in 
+  check_raises "incorrect conjunction"
+  (Failure "Runtime type error: Expected two booleans, but got 5 and false") v
+
+let test_error_IIB () =
+  let v = (fun () -> ignore @@ (interp (Prim2 (Lte, Bool true, Num 10L))) empty_env empty_fenv) in 
+  check_raises  "incorrect lesser comparison" 
+  (Failure "Runtime type error: Expected two integers, but got true and 10") v
+
 (* OCaml tests: extend with your own tests *)
 let ocaml_tests = [
   "parse", [
@@ -210,6 +227,13 @@ let ocaml_tests = [
     test_case "A simple application" `Slow test_interp_fo_app_1 ;
     test_case "A complex application" `Slow test_interp_fo_app_2 ;
     test_case "A compound expression" `Quick test_interp_compound
+  ] ;
+  "errors", [
+      test_case "Addition of true" `Quick test_error_III ;
+    test_case "And of 5" `Quick test_error_BBB ;
+    test_case "Lesser than true" `Quick test_error_IIB
+
+
   ]
 ]     
 
@@ -221,6 +245,10 @@ let () =
     let compiler : string -> out_channel -> unit = 
       fun s o -> fprintf o "%s" (compile_prog (parse_prog (sexp_from_string s))) in
     let oracle : string -> status * string = 
-      fun s -> NoError , string_of_val (interp_prog (parse_prog (sexp_from_string s)) empty_env) in
+      fun s -> 
+          let (e,v) = try (NoError , string_of_val (interp_prog (parse_prog (sexp_from_string s)) empty_env)) with 
+          | Failure msg -> (RTError, msg) 
+          | e -> RTError, "Oracle raised an unknown error :"^ Printexc.to_string e in
+          (e,v) in
     tests_from_dir ~compile_flags ~compiler ~oracle ~runtime:"rt/sys.c" "bbctests" in
   run "Tests entrega 1" (ocaml_tests @ bbc_tests)
