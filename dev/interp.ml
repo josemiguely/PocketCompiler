@@ -17,8 +17,8 @@ let string_of_val(v : value) : string =
   | NumV n -> Int64.to_string n
   | BoolV b -> if b then "true" else "false"
 
-(** Testing Foreign Functions **)
-let foreign_func_prelude : (string * int * (value list -> value)) list = [
+(** Testing Sys Functions **)
+let sys_func_prelude : (string * int * (value list -> value)) list = [
   "print", 1, (
     fun vls -> 
       match vls with 
@@ -138,7 +138,7 @@ let prepare_defs (defs : funcdef list) : fenv =
       | DefFun (name, params, body) -> (name, Fun (params, body))
       | DefSys (name, arg_types, ret_type) -> (
         let arity = (List.length arg_types) in
-        let cls = List.find_opt (fun (n, a, _) -> (String.equal n name) && (arity == a)) foreign_func_prelude in
+        let cls = List.find_opt (fun (n, a, _) -> (String.equal n name) && (arity == a)) sys_func_prelude in
         match cls with
         | Some (_, _, lambda) -> (name, Sys (arg_types, ret_type, lambda)) 
         | None -> failwith (Printf.sprintf "No %s function exists with arity %d" name arity) )
