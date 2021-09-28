@@ -244,11 +244,19 @@ let () =
     let compile_flags = Option.value (Sys.getenv_opt "CFLAGS") ~default:"-g" in
     let compiler : string -> out_channel -> unit = 
       fun s o -> fprintf o "%s" (compile_prog (parse_prog (sexp_from_string s))) in
-    let oracle : string -> status * string = 
-      fun s -> 
-          let (e,v) = try (NoError , string_of_val (interp_prog (parse_prog (sexp_from_string s)) empty_env)) with 
-          | Failure msg -> (RTError, msg) 
-          | e -> RTError, "Oracle raised an unknown error :"^ Printexc.to_string e in
-          (e,v) in
+    let oracle : string -> status * string = (
+      fun s -> (
+        try
+          NoError, string_of_val (interp_prog (parse_prog (sexp_from_string s)) empty_env)
+        with
+        | Failure msg -> if (
+            let re = Str.regexp_string "Runtime" in
+            try ignore (Str.search_forward re msg 0); true
+            with Not_found -> false
+          ) then RTError, msg 
+            else CTError, msg
+        |  e -> RTError, "Oracle raised an unknown error :"^ Printexc.to_string e 
+      )
+    ) in
     tests_from_dir ~compile_flags ~compiler ~oracle ~runtime:"rt/sys.c" "bbctests" in
   run "Tests entrega 1" (ocaml_tests @ bbc_tests)
