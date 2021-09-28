@@ -249,12 +249,10 @@ let () =
         try
           NoError, string_of_val (interp_prog (parse_prog (sexp_from_string s)) empty_env)
         with
-        | Failure msg -> if (
-            let re = Str.regexp_string "Runtime" in
-            try ignore (Str.search_forward re msg 0); true
-            with Not_found -> false
-          ) then RTError, msg 
-            else CTError, msg
+        | Failure msg -> 
+          let re = Str.regexp_string "Runtime" in
+          try ignore (Str.search_forward re msg 0); RTError, msg
+          with Not_found -> CTError, msg
         |  e -> RTError, "Oracle raised an unknown error :"^ Printexc.to_string e 
       )
     ) in
