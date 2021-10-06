@@ -4,7 +4,7 @@ open Printf
 (* primitive operators *)
 type prim1 = Add1 | Sub1 
 | Print (* comment out this line if providing print via the sys interface *)
-type prim2 = Add | And | Lte 
+type prim2 = Add | And | Lte | Get
 
 (* Algebraic datatype for expressions *)
 type expr = 
@@ -16,6 +16,8 @@ type expr =
   | Let of string * expr * expr
   | If of expr * expr * expr
   | Apply of string * expr list
+  | Tuple of expr list 
+  | Set of expr * expr * expr 
 
 (* C function argument types *)
 type ctype =
@@ -51,10 +53,18 @@ let rec string_of_expr(e : expr) : string =
     (match op with 
     | Add -> "+"
     | And -> "and"
-    | Lte -> "<=") (string_of_expr e1) (string_of_expr e2)
+    | Lte -> "<="
+    | Get -> "get") (string_of_expr e1) (string_of_expr e2)
   | Let (x, e1, e2) -> sprintf "(let (%s %s) %s)" x (string_of_expr e1) (string_of_expr e2) 
   | If (e1, e2, e3) -> sprintf "(if %s %s %s)" (string_of_expr e1) (string_of_expr e2) (string_of_expr e3)
   | Apply (fe, ael) -> sprintf "(%s %s)" fe (String.concat " " (List.map string_of_expr ael))
+  | Tuple (exprs) -> sprintf "(%s)" (string_of_exprs exprs) 
+  | Set (e, k, v) -> sprintf "(set %s %s %s)" (string_of_expr e) (string_of_expr k) (string_of_expr v) 
+  and string_of_exprs (e: expr list) : string = 
+      match e with
+      | [] -> ""
+      | [ h ] -> string_of_expr h
+      | h :: t -> sprintf "%s,%s" (string_of_expr h) (string_of_exprs t) 
 
 
 (** functions below are not used, would be used if testing the parser on defs **)
