@@ -24,6 +24,7 @@ type ctype =
   | CAny
   | CInt
   | CBool
+  | CTuple of ctype list
 
 (* Function definitions *)
 type fundef =
@@ -70,11 +71,18 @@ let rec string_of_expr(e : expr) : string =
 (** functions below are not used, would be used if testing the parser on defs **)
 
 (* Pretty printing C types - used by testing framework *)
-let string_of_ctype(t : ctype) : string =
+let rec string_of_ctype(t : ctype) : string =
 match t with
 | CAny -> "any"
 | CInt -> "int"
 | CBool -> "bool"
+| CTuple types -> 
+        let rec string_of_types =
+            fun ls -> (match ls with
+            | [] -> ""
+            | e::l -> e ^ "," ^ string_of_types l) in
+        "("^string_of_types (List.map string_of_ctype types)^")"
+
 
 (* Pretty printing function definitions - used by testing framework *)
 let string_of_fundef(d : fundef) : string =

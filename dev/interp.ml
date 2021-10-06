@@ -7,12 +7,19 @@ exception RTError of string
 type value = 
   | NumV of int64
   | BoolV of bool
+  | TupleV of value list
 
 (* Pretty printing *)
-let string_of_val(v : value) : string =
+let rec string_of_val(v : value) : string =
 match v with
 | NumV n -> Int64.to_string n
 | BoolV b -> if b then "true" else "false"
+| TupleV vals -> 
+        let rec string_of_val_list =
+            fun ls -> (match ls with
+            | [] -> ""
+            | e::l -> e ^ "," ^ string_of_val_list l) in 
+        "("^string_of_val_list (List.map string_of_val vals)^")"
 
 (* Lifting functions on OCaml primitive types to operate on language values *)
 let liftIII : (int64 -> int64 -> int64) -> value -> value -> value =
@@ -33,7 +40,17 @@ let liftIIB : (int64 -> int64 -> bool) -> value -> value -> value =
     | NumV n1, NumV n2 -> BoolV (op n1 n2)
     | _ -> raise (RTError (Printf.sprintf "Expected two integers, but got %s and %s" (string_of_val e1) (string_of_val e2)))
 
-  
+let get_elem : value -> value -> value =
+    fun e1 e2 ->
+        match e1, e2 with
+        | TupleV ts, NumV n -> 
+                (try List.nth ts (Int64.to_int n)
+                with
+                | Failure msg -> raise (RTError msg)
+                | RTError msg -> raise (RTError msg)
+                | e -> raise (RTError ("unknown error in get elem:"^ Printexc.to_string e )))
+        | _ -> raise (RTError (Printf.sprintf "Expected tuple in first position and integer in second position, but got %s and %s" (string_of_val e1) (string_of_val e2)))
+
 (* Sys functions *)
 let defs_prelude : fundef list = [
   DefSys ("print", [CAny], CAny) ;
@@ -64,11 +81,17 @@ let rec lookup_fenv : string -> fenv -> fundef =
     | (f::fs) -> if fundef_name f = s then f else lookup_fenv s fs
 
 (* check that the value is of the given type, return the value if ok *)
-let check_type (t : ctype) (v : value) : value =
+let rec check_type (t : ctype) (v : value) : value =
     match v, t with
     | NumV _, CInt | BoolV _, CBool | _, CAny -> v
-    | NumV _, CBool -> raise (RTError (Printf.sprintf "Expected boolean but got %s" (string_of_val v)))
-    | BoolV _, CInt -> raise (RTError (Printf.sprintf "Expected integer but got %s" (string_of_val v)))
+    | TupleV vals, CTuple types -> 
+            let _ = List.map2 check_type types vals in
+            v
+    | NumV _, _ -> raise (RTError (Printf.sprintf "Expected boolean but got %s" (string_of_val v)))
+    | BoolV _, _ -> raise (RTError (Printf.sprintf "Expected integer but got %s" (string_of_val v)))
+    | TupleV _,_ -> raise (RTError (Printf.sprintf "Expected tuple but got %s" (string_of_val v)))
+            
+
 
 (* provide a dummy (non-C) interpretation of sys functions print and max *)
 let interp_sys name vals = 
@@ -96,7 +119,8 @@ let rec interp expr env fenv =
     (match op with
     | Add -> liftIII ( Int64.add ) 
     | And -> liftBBB ( && ) 
-    | Lte -> liftIIB ( <= )) (interp e1 env fenv) (interp e2 env fenv)
+    | Lte -> liftIIB ( <= ) 
+    | Get -> get_elem) (interp e1 env fenv) (interp e2 env fenv)
   | Let (x, e , b) -> interp b (extend_env [x] [(interp e env fenv)] env) fenv
   | If (e1, e2, e3) -> 
     (match interp e1 env fenv with
