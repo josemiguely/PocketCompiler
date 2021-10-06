@@ -7,7 +7,7 @@ exception RTError of string
 type value = 
   | NumV of int64
   | BoolV of bool
-  | TupleV of value list
+  | TupleV of value list ref
 
 (* Pretty printing *)
 let rec string_of_val(v : value) : string =
@@ -18,44 +18,9 @@ match v with
         let rec string_of_val_list =
             fun ls -> (match ls with
             | [] -> ""
-            | e::l -> e ^ "," ^ string_of_val_list l) in 
-        "("^string_of_val_list (List.map string_of_val vals)^")"
-
-(* Lifting functions on OCaml primitive types to operate on language values *)
-let liftIII : (int64 -> int64 -> int64) -> value -> value -> value =
-  fun op e1 e2 ->
-    match e1, e2 with
-    | NumV n1, NumV n2 -> NumV (op n1 n2)
-    | _ -> raise (RTError (Printf.sprintf "Expected two integers, but got %s and %s" (string_of_val e1) (string_of_val e2)))
-
-let liftBBB : (bool -> bool -> bool) -> value -> value -> value =
-  fun op e1 e2 ->
-    match e1, e2 with
-    | BoolV b1, BoolV b2 -> BoolV (op b1 b2)
-    | _ -> raise (RTError (Printf.sprintf "Expected two booleans, but got %s and %s" (string_of_val e1) (string_of_val e2)))
-
-let liftIIB : (int64 -> int64 -> bool) -> value -> value -> value =
-  fun op e1 e2 ->
-    match e1, e2 with
-    | NumV n1, NumV n2 -> BoolV (op n1 n2)
-    | _ -> raise (RTError (Printf.sprintf "Expected two integers, but got %s and %s" (string_of_val e1) (string_of_val e2)))
-
-let get_elem : value -> value -> value =
-    fun e1 e2 ->
-        match e1, e2 with
-        | TupleV ts, NumV n -> 
-                (try List.nth ts (Int64.to_int n)
-                with
-                | Failure msg -> raise (RTError msg)
-                | RTError msg -> raise (RTError msg)
-                | e -> raise (RTError ("unknown error in get elem:"^ Printexc.to_string e )))
-        | _ -> raise (RTError (Printf.sprintf "Expected tuple in first position and integer in second position, but got %s and %s" (string_of_val e1) (string_of_val e2)))
-
-(* Sys functions *)
-let defs_prelude : fundef list = [
-  DefSys ("print", [CAny], CAny) ;
-  DefSys ("max", [CInt ; CInt], CInt) 
-]
+            | [h] -> string_of_val h  
+            | e::l -> string_of_val e ^ " " ^ string_of_val_list l) in 
+        "("^(string_of_val_list !vals)^")"
 
 (* Lexical Environment *)
 type env = (string * value) list
@@ -80,12 +45,62 @@ let rec lookup_fenv : string -> fenv -> fundef =
     | [] -> raise (RTError (Printf.sprintf "Undefined function: %s" s))
     | (f::fs) -> if fundef_name f = s then f else lookup_fenv s fs
 
+(* Lifting functions on OCaml primitive types to operate on language values *)
+let liftIII : (int64 -> int64 -> int64) -> value -> value -> value =
+  fun op e1 e2 ->
+    match e1, e2 with
+    | NumV n1, NumV n2 -> NumV (op n1 n2)
+    | _ -> raise (RTError (Printf.sprintf "Expected two integers, but got %s and %s" (string_of_val e1) (string_of_val e2)))
+
+let liftBBB : (bool -> bool -> bool) -> value -> value -> value =
+  fun op e1 e2 ->
+    match e1, e2 with
+    | BoolV b1, BoolV b2 -> BoolV (op b1 b2)
+    | _ -> raise (RTError (Printf.sprintf "Expected two booleans, but got %s and %s" (string_of_val e1) (string_of_val e2)))
+
+let liftIIB : (int64 -> int64 -> bool) -> value -> value -> value =
+  fun op e1 e2 ->
+    match e1, e2 with
+    | NumV n1, NumV n2 -> BoolV (op n1 n2)
+    | _ -> raise (RTError (Printf.sprintf "Expected two integers, but got %s and %s" (string_of_val e1) (string_of_val e2)))
+
+let get_elem : value -> value -> value =
+    fun v1 v2 ->
+        match v1, v2 with
+        | TupleV ts, NumV n -> 
+                (try List.nth !ts (Int64.to_int n)
+                with
+                | Failure msg -> raise (RTError msg)
+                | RTError msg -> raise (RTError msg)
+                | e -> raise (RTError ("unknown error in get elem:"^ Printexc.to_string e )))
+        | _ -> raise (RTError (Printf.sprintf "Expected tuple in first position and integer in second position, but got %s and %s" (string_of_val v1) (string_of_val v2)))
+
+let rec change : 'a list -> int -> int -> 'a -> 'a list =
+    fun es index n v -> 
+        if index == n 
+        then v :: (List.tl es)
+        else (List.hd es) :: change (List.tl es) (1 + index) n v
+
+let set_elem : value -> value -> value -> value = 
+    fun v1 v2 v3 -> 
+        match v1,v2 with
+        | TupleV ts, NumV n -> 
+                ts := change !ts 0 (Int64.to_int n) v3 ; TupleV ts
+        | _ -> raise (RTError (Printf.sprintf "Expected tuple in first position and integer in second position, but got %s and %s" (string_of_val v1) (string_of_val v2)))
+
+(* Sys functions *)
+let defs_prelude : fundef list = [
+  DefSys ("print", [CAny], CAny) ;
+  DefSys ("max", [CInt ; CInt], CInt) 
+]
+
+
 (* check that the value is of the given type, return the value if ok *)
 let rec check_type (t : ctype) (v : value) : value =
     match v, t with
     | NumV _, CInt | BoolV _, CBool | _, CAny -> v
     | TupleV vals, CTuple types -> 
-            let _ = List.map2 check_type types vals in
+            let _ = List.map2 check_type types !vals in
             v
     | NumV _, _ -> raise (RTError (Printf.sprintf "Expected boolean but got %s" (string_of_val v)))
     | BoolV _, _ -> raise (RTError (Printf.sprintf "Expected integer but got %s" (string_of_val v)))
@@ -133,6 +148,10 @@ let rec interp expr env fenv =
       interp body (extend_env params vals env) fenv
     | DefSys (_, arg_types, ret_type) ->
       check_type ret_type @@ interp_sys name (List.map2 check_type arg_types vals))
+  | Tuple exprs -> 
+          TupleV (ref (List.map (fun e -> interp e env fenv) exprs))
+  | Set (e,k,v) ->
+          set_elem (interp e env fenv) (interp k env fenv) (interp v env fenv)
 
 let interp_prog prog env =
   let defs, expr = prog in

@@ -25,6 +25,9 @@ let test_parse_var () =
 let test_parse_bool () =
   check exp "same bool" (parse_exp (`Atom "true")) (Bool true)
   
+let test_parse_tuple () =
+    check exp "same tuple" (parse_exp (`List [`Atom "true" ; `Atom "1"])) (Tuple [(Bool true);(Num 1L)] )
+
 let test_parse_add1 () =
   check exp "increment applies" 
   (parse_exp (`List [`Atom "add1" ; `Atom "1"])) 
@@ -49,6 +52,12 @@ let test_parse_and () =
   check exp "conjunction applies" 
   (parse_exp (`List [`Atom "and" ; `Atom "true" ; `Atom "false"])) 
   (Prim2 (And, Bool true, Bool false))
+
+let test_parse_get () =
+    check exp "get applies" (parse_exp (`List [`Atom "get" ; `Atom "1";`Atom "2"])) (Prim2 (Get,Num 1L, Num 2L))
+
+let test_parse_set () =
+    check exp "set applies" (parse_exp (`List [`Atom "set" ; `Atom "true";`Atom "37";`Atom "3"])) (Set (Bool true, Num 37L,Num 3L))
 
 let test_parse_fork () =
   check exp "if clause applies"
@@ -199,9 +208,12 @@ let ocaml_tests = [
     test_case "A number" `Quick test_parse_int ;
     test_case "A variable" `Quick test_parse_var ;
     test_case "A boolean" `Quick test_parse_bool ;
+    test_case "A tuple" `Quick test_parse_tuple ;
     test_case "An increment" `Quick test_parse_add1 ;
     test_case "A decrement" `Quick test_parse_sub1 ;
     test_case "An addition" `Quick test_parse_add ;
+    test_case "A get" `Quick test_parse_get ;
+    test_case "An set" `Quick test_parse_set ;
     test_case "A lesser comparison" `Quick test_parse_less ;
     test_case "A conjunction" `Quick test_parse_and ;
     test_case "An if clause" `Quick test_parse_fork ;
