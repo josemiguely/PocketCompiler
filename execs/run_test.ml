@@ -26,7 +26,7 @@ let test_parse_bool () =
   check exp "same bool" (parse_exp (`Atom "true")) (Bool true)
   
 let test_parse_tuple () =
-    check exp "same tuple" (parse_exp (`List [`Atom "true" ; `Atom "1"])) (Tuple [(Bool true);(Num 1L)] )
+    check exp "same tuple" (parse_exp (`List [`Atom "tup"; `Atom "true" ; `Atom "1"])) (Tuple [(Bool true);(Num 1L)] )
 
 let test_parse_add1 () =
   check exp "increment applies" 
@@ -143,6 +143,21 @@ let test_interp_fo_fun_1 () =
   )) empty_env in 
   check value "correct simple function execution" v 
   (NumV 4L)
+
+let test_interp_tup () =
+  let v = (interp (Tuple [Num 12L;Bool true;Tuple []])) empty_env empty_fenv in
+  check value "a tuple val" v 
+  (TupleV (ref [NumV 12L;BoolV true; TupleV (ref [])]))
+
+let test_interp_get () =
+  let v = (interp (Prim2 (Get ,Tuple [Num 12L;Bool true;Tuple []],Num 0L))) empty_env empty_fenv in
+  check value "correct get execution" v 
+  (NumV 12L)
+
+let test_interp_set () =
+  let v = (interp (Let ("x",(Tuple [Num 12L;Bool true;Tuple []]) , (Let ("foo", (Set (Id "x", Num 1L, Bool false)), (Id "x")))))) empty_env empty_fenv in
+  check value "correct set execution" v 
+  (TupleV (ref [NumV 12L;BoolV false; TupleV (ref [])]))
   
 let test_interp_fo_fun_2 () =
   let v = (interp_prog (
@@ -225,6 +240,7 @@ let ocaml_tests = [
     test_case "A number" `Quick test_interp_num ;
     test_case "A variable" `Quick test_interp_var ;
     test_case "A boolean" `Slow test_interp_bool ;
+    test_case "A tuple" `Slow test_interp_tup ;
     test_case "An increment" `Slow test_interp_add1 ;
     test_case "An decrement" `Slow test_interp_sub1 ;
     test_case "An addition" `Slow test_interp_add ;
@@ -238,7 +254,9 @@ let ocaml_tests = [
     test_case "A complex function" `Slow test_interp_fo_fun_2 ;
     test_case "A simple application" `Slow test_interp_fo_app_1 ;
     test_case "A complex application" `Slow test_interp_fo_app_2 ;
-    test_case "A compound expression" `Quick test_interp_compound
+    test_case "A compound expression" `Quick test_interp_compound;
+    test_case "A get expression" `Slow test_interp_get ;
+    test_case "A set expression" `Slow test_interp_set 
   ] ;
   "errors", [
       test_case "Addition of true" `Quick test_error_III ;
