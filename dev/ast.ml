@@ -64,8 +64,7 @@ let rec string_of_expr(e : expr) : string =
   and string_of_exprs (e: expr list) : string = 
       match e with
       | [] -> ""
-      | [ h ] -> string_of_expr h
-      | h :: t -> sprintf "%s %s" (string_of_expr h) (string_of_exprs t) 
+      | h :: t -> " " ^ (string_of_expr h) ^ (string_of_exprs t) 
 
 
 (** functions below are not used, would be used if testing the parser on defs **)
