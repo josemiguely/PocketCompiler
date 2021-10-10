@@ -20,7 +20,7 @@ match v with
             | [] -> ""
             | [h] -> string_of_val h  
             | e::l -> string_of_val e ^ " " ^ string_of_val_list l) in 
-        "("^(string_of_val_list !vals)^")"
+        "(tup "^(string_of_val_list !vals)^")"
 
 (* Lexical Environment *)
 type env = (string * value) list

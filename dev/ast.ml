@@ -59,7 +59,7 @@ let rec string_of_expr(e : expr) : string =
   | Let (x, e1, e2) -> sprintf "(let (%s %s) %s)" x (string_of_expr e1) (string_of_expr e2) 
   | If (e1, e2, e3) -> sprintf "(if %s %s %s)" (string_of_expr e1) (string_of_expr e2) (string_of_expr e3)
   | Apply (fe, ael) -> sprintf "(%s %s)" fe (String.concat " " (List.map string_of_expr ael))
-  | Tuple (exprs) -> sprintf "(%s)" (string_of_exprs exprs) 
+  | Tuple (exprs) -> sprintf "(tup %s)" (string_of_exprs exprs) 
   | Set (e, k, v) -> sprintf "(set %s %s %s)" (string_of_expr e) (string_of_expr k) (string_of_expr v) 
   and string_of_exprs (e: expr list) : string = 
       match e with
