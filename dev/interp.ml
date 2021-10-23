@@ -8,6 +8,7 @@ type value =
   | NumV of int64
   | BoolV of bool
   | TupleV of value list ref
+  | ClosureV of (string * value) list * string list * expr
 
 (* Pretty printing *)
 let rec string_of_val(v : value) : string =
@@ -20,6 +21,7 @@ match v with
             | [] -> ""
             | e::l -> " " ^ string_of_val e ^ string_of_val_list l) in 
         "(tup"^(string_of_val_list !vals)^")"
+| ClosureV (_, _, _) -> "(Closure)"
 
 (* Lexical Environment *)
 type env = (string * value) list
@@ -104,6 +106,7 @@ let rec check_type (t : ctype) (v : value) : value =
     | NumV _, _ -> raise (RTError (Printf.sprintf "Expected boolean but got %s" (string_of_val v)))
     | BoolV _, _ -> raise (RTError (Printf.sprintf "Expected integer but got %s" (string_of_val v)))
     | TupleV _,_ -> raise (RTError (Printf.sprintf "Expected tuple but got %s" (string_of_val v)))
+    | _ -> raise (RTError (Printf.sprintf "Expected C type but got %s" (string_of_val v))) (* TODO: Incluse closures into the mix *)
             
 
 
