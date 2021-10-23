@@ -156,6 +156,7 @@ let rec interp expr env fenv =
           let t = (interp e env fenv) in
           let i = (interp k env fenv) in
           set_elem t i (interp v env fenv)
+  | Lambda (params, body) -> ClosureV (env, params, body)
 
 let interp_prog prog env =
   let defs, expr = prog in
