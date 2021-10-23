@@ -139,7 +139,7 @@ let test_interp_let_2 () =
 let test_interp_fo_fun_1 () =
   let v = (interp_prog (
     [DefFun ("f", ["x"], (Prim2 (Add, Id "x", Id "x")))],
-    (Apply ("f", [Num 2L]))
+    (Apply (Id "f", [Num 2L]))
   )) empty_env in 
   check value "correct simple function execution" v 
   (NumV 4L)
@@ -162,7 +162,7 @@ let test_interp_set () =
 let test_interp_fo_fun_2 () =
   let v = (interp_prog (
     [DefFun ("f", ["x" ; "y" ; "z"], (Prim2 (Add, (Prim2 (Add, Id "x", Id "y")), Id "z")))],
-  (Apply ("f" , [Num 2L ; Num 20L ; Num 200L]))
+  (Apply (Id "f" , [Num 2L ; Num 20L ; Num 200L]))
   )) empty_env in 
   check value "correct complex function execution" v 
   (NumV 222L)
@@ -176,8 +176,8 @@ let test_interp_fo_app_1 () =
       DefFun ("f", ["x" ; "y"], (Prim2 (Add, Id "x", Id "y")));
       DefFun ("g", ["y"], (Prim2 (Add, Num 7L, Id "y")))
     ],
-    (Apply ("g", [
-      (Apply ("f", [Num 4L ; Num 3L]))
+    (Apply (Id "g", [
+      (Apply (Id "f", [Num 4L ; Num 3L]))
     ]))
   )
   ) empty_env)
@@ -189,9 +189,9 @@ let test_interp_fo_app_2 () =
   (
     [
       DefFun ("f", ["x" ; "y"], (Prim2 (Add, Id "x", Id "y")));
-      DefFun ("g", ["x"], (Apply ("f", [Id "x" ; Id "x"])))
+      DefFun ("g", ["x"], (Apply (Id "f", [Id "x" ; Id "x"])))
     ],
-    (Apply ("g", [Num 100L]))
+    (Apply (Id "g", [Num 100L]))
   )
   ) empty_env)
 
