@@ -5,6 +5,11 @@ open CCSexp
 
 exception CTError of string
 
+let parse_arg_name (sexp : sexp) : string =
+  match sexp with
+  | `Atom name -> name
+  | _ -> raise (CTError (sprintf "Not a valid argument name: %s" (to_string sexp)))
+
 let rec parse_exp (sexp : sexp) : expr =
   match sexp with
   | `Atom "true" -> Bool true
@@ -18,8 +23,7 @@ let rec parse_exp (sexp : sexp) : expr =
     | `Atom "add1" -> Prim1 (Add1, parse_exp e)
     | `Atom "sub1" -> Prim1 (Sub1, parse_exp e)
     | `Atom "print" -> Prim1 (Print, parse_exp e)  (* comment out this line if providing print via the sys interface *)
-    | `Atom name -> Apply (name, [parse_exp e])
-    | _ -> raise (CTError (sprintf "Not a valid expr: %s" (to_string sexp)))
+    | _ -> Apply (parse_exp eop, [parse_exp e])
     )
   | `List [eop; e1; e2] -> (
     match eop with
@@ -31,12 +35,17 @@ let rec parse_exp (sexp : sexp) : expr =
     | `Atom "and" -> Prim2 (And, parse_exp e1, parse_exp e2)
     | `Atom "<=" -> Prim2 (Lte, parse_exp e1, parse_exp e2)
     | `Atom "get" -> Prim2 (Get, parse_exp e1, parse_exp e2)
-    | `Atom name -> Apply (name, [parse_exp e1 ; parse_exp e2])
-    | _ -> raise (CTError (sprintf "Not a valid expr: %s" (to_string sexp)))
+    | `Atom "lambda" -> (
+      match e1 with
+      | `Atom "-" -> Lambda ([], parse_exp e2)
+      | `List params -> Lambda (List.map parse_arg_name params, parse_exp e2)
+      | _ -> raise (CTError (sprintf "Not a valid lambda: %s" (to_string sexp)))
+    )
+    | _ -> Apply (parse_exp eop, [parse_exp e1 ; parse_exp e2])
     )
   | `List [`Atom "if"; e1; e2; e3] -> If (parse_exp e1, parse_exp e2, parse_exp e3)
   | `List [ `Atom "set"; e; k; v ] -> Set (parse_exp e, parse_exp k, parse_exp v)
-  | `List (`Atom name :: e2) -> Apply (name, List.map parse_exp e2)
+  | `List (e1 :: e2) -> Apply (parse_exp e1, List.map parse_exp e2)
   | _ -> raise (CTError (sprintf "Not a valid expr: %s" (to_string sexp)))
 
 let rec parse_prog (sexp : sexp) : prog =
@@ -60,11 +69,6 @@ let rec parse_prog (sexp : sexp) : prog =
     | _ -> [], parse_exp sexp
   )
   | _ -> [], parse_exp sexp
-
-and parse_arg_name (sexp : sexp) : string =
-  match sexp with
-  | `Atom name -> name
-  | _ -> raise (CTError (sprintf "Not a valid argument name: %s" (to_string sexp)))
 
 and parse_c_type (sexp : sexp) : ctype =
   match sexp with
