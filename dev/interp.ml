@@ -143,13 +143,25 @@ let rec interp expr env fenv =
     (match interp e1 env fenv with
     | BoolV b -> interp (if b then e2 else e3) env fenv
     | e -> raise (RTError (Printf.sprintf "Expected boolean, but got %s" (string_of_val e))) )
-  | Apply (name, args) -> 
-    let vals = List.map (fun e -> interp e env fenv) args in
-    (match lookup_fenv name fenv with
-    | DefFun (_, params, body) -> 
-      interp body (extend_env params vals env) fenv
-    | DefSys (_, arg_types, ret_type) ->
-      check_type ret_type @@ interp_sys name (List.map2 check_type arg_types vals))
+  | Apply (fun_exp, args) -> 
+    let f = interp fun_exp env fenv in
+    (
+      match f with
+      | ClosureV (clenv, params, body) -> 
+        let vals = List.map (fun e -> interp e env fenv) args in
+        let clenv = extend_env params vals clenv in
+        (match body with
+        | Id name when Bool.not ((List.exists (fun (n, _) -> String.equal n name) clenv) || (List.exists (fun n -> String.equal n name) params)) -> (* If the Id doesn't exist in the closure environment nor the parameter names, it MUST be a first order function *)
+          (match lookup_fenv name fenv with
+          | DefFun (_, _, body) -> 
+            interp body clenv fenv
+          | DefSys (_, arg_types, ret_type) ->
+            check_type ret_type @@ interp_sys name (List.map2 check_type arg_types vals))
+        | _ -> interp body clenv fenv
+        )
+        
+      | _ -> raise (RTError (Printf.sprintf "Expected closure, but got %s" (string_of_val f)))
+    )
   | Tuple exprs -> 
           TupleV (ref (List.map (fun e -> interp e env fenv) exprs))
   | Set (e,k,v) ->
@@ -161,4 +173,10 @@ let rec interp expr env fenv =
 let interp_prog prog env =
   let defs, expr = prog in
   let fenv = defs_prelude @ defs in
+  let env = env @ List.map (
+    fun d -> 
+      match d with 
+      | DefFun (name, params, _) -> name, ClosureV (env, params, Id name)
+      | DefSys (name, arg_types, _) -> name, ClosureV (env, List.init (List.length arg_types) (fun _ -> "-"), Id name)
+    ) defs in
   interp expr env fenv
