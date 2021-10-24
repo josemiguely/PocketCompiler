@@ -8,7 +8,7 @@ type value =
   | NumV of int64
   | BoolV of bool
   | TupleV of value list ref
-  | ClosureV of (string * value) list * string list * expr
+  | ClosureV of int * (value list -> value)
 
 (* Pretty printing *)
 let rec string_of_val(v : value) : string =
@@ -21,7 +21,7 @@ match v with
             | [] -> ""
             | e::l -> " " ^ string_of_val e ^ string_of_val_list l) in 
         "(tup"^(string_of_val_list !vals)^")"
-| ClosureV (_, _, _) -> "(Closure)"
+| ClosureV (arity, _) -> Printf.sprintf "(Closure of arity %d)" arity
 
 (* Lexical Environment *)
 type env = (string * value) list
@@ -132,8 +132,15 @@ let rec interp expr env fenv =
         let d = lookup_fenv x fenv in
         (
           match d with 
-          | DefFun (name, params, _) -> ClosureV (empty_env, params, Id name)
-          | DefSys (name, arg_types, _) -> ClosureV (empty_env, List.init (List.length arg_types) (fun _ -> "-"), Id name)
+          | DefFun (_, params, body) -> ClosureV (List.length params,
+            fun vals ->
+              let clenv = extend_env params vals empty_env in
+              interp body clenv fenv
+          )
+          | DefSys (name, arg_types, ret_type) -> ClosureV (List.length arg_types,
+            fun vals ->
+              check_type ret_type @@ interp_sys name (List.map2 check_type arg_types vals)
+          )
         )
       | e -> raise e
     )
@@ -159,19 +166,11 @@ let rec interp expr env fenv =
     let f = interp fun_exp env fenv in
     (
       match f with
-      | ClosureV (clenv, params, body) -> 
+      | ClosureV (arity, closure) -> 
         let vals = List.map (fun e -> interp e env fenv) args in
-        let clenv = extend_env params vals clenv in
-        (match body with
-        | Id name when Bool.not ((List.exists (fun (n, _) -> String.equal n name) clenv) || (List.exists (fun n -> String.equal n name) params)) -> (* If the Id doesn't exist in the closure environment nor the parameter names, it MUST be a first order function *)
-          (match lookup_fenv name fenv with
-          | DefFun (_, _, body) -> 
-            interp body clenv fenv
-          | DefSys (_, arg_types, ret_type) ->
-            check_type ret_type @@ interp_sys name (List.map2 check_type arg_types vals))
-        | _ -> interp body clenv fenv
-        )
-      | _ -> raise (RTError (Printf.sprintf "Expected closure, but got %s" (string_of_val f)))
+        if List.length vals <> arity then raise (RTError (Printf.sprintf "Expected closure of arity %d, but got %s" (List.length args) (string_of_val f))) else
+        closure vals
+      | _ -> raise (RTError (Printf.sprintf "Expected closure of arity %d, but got %s" (List.length args) (string_of_val f)))
     )
   | Tuple exprs -> 
           TupleV (ref (List.map (fun e -> interp e env fenv) exprs))
@@ -179,7 +178,12 @@ let rec interp expr env fenv =
           let t = (interp e env fenv) in
           let i = (interp k env fenv) in
           set_elem t i (interp v env fenv)
-  | Lambda (params, body) -> ClosureV (env, params, body)
+  | Lambda (params, body) -> ClosureV (List.length params,
+    (fun vals -> 
+      let env = extend_env params vals env in
+      interp body env fenv
+      )
+    )
 
 let interp_prog prog env =
   let defs, expr = prog in
