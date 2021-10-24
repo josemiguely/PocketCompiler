@@ -124,7 +124,19 @@ let interp_sys name vals =
 (* interpreter *)
 let rec interp expr env fenv =
   match expr with
-  | Id x -> lookup_env x env
+  | Id x -> (
+      try
+        lookup_env x env
+      with 
+      | RTError _ -> 
+        let d = lookup_fenv x fenv in
+        (
+          match d with 
+          | DefFun (name, params, _) -> ClosureV (empty_env, params, Id name)
+          | DefSys (name, arg_types, _) -> ClosureV (empty_env, List.init (List.length arg_types) (fun _ -> "-"), Id name)
+        )
+      | e -> raise e
+    )
   | Num n -> NumV n
   | Bool b -> BoolV b
   | Prim1 (op, e) -> (
@@ -159,7 +171,6 @@ let rec interp expr env fenv =
             check_type ret_type @@ interp_sys name (List.map2 check_type arg_types vals))
         | _ -> interp body clenv fenv
         )
-        
       | _ -> raise (RTError (Printf.sprintf "Expected closure, but got %s" (string_of_val f)))
     )
   | Tuple exprs -> 
@@ -173,10 +184,4 @@ let rec interp expr env fenv =
 let interp_prog prog env =
   let defs, expr = prog in
   let fenv = defs_prelude @ defs in
-  let env = env @ List.map (
-    fun d -> 
-      match d with 
-      | DefFun (name, params, _) -> name, ClosureV (env, params, Id name)
-      | DefSys (name, arg_types, _) -> name, ClosureV (env, List.init (List.length arg_types) (fun _ -> "-"), Id name)
-    ) defs in
   interp expr env fenv
