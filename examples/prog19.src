@@ -1,0 +1,17 @@
+(letrec 
+  ((even (lambda (n) (or (<= n 0) (odd (+ n -1)))))
+    (odd  (lambda (n) (or (<= n 1) (even (+ n-1))))))
+  (let 
+    (collatz-aux (lambda (n) (if (even n) (/ n 2) (+ 1 (* 3 n)))))
+    (letrec 
+      ((collatz 
+        (lambda (n it) 
+          (let 
+            (n (collatz-aux n)) 
+            (if 
+              (or 
+                (<= 1000 it) 
+                (<= n 1)) 
+              it 
+              (collatz n (+ it 1)))))))
+      (collatz 42 0))))
