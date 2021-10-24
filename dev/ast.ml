@@ -19,6 +19,7 @@ type expr =
   | Tuple of expr list 
   | Set of expr * expr * expr 
   | Lambda of string list * expr
+  | LetRec of (string * string list * expr) list * expr
 
 (* C function argument types *)
 type ctype =
@@ -64,6 +65,11 @@ let rec string_of_expr(e : expr) : string =
   | Set (e, k, v) -> sprintf "(set %s %s %s)" (string_of_expr e) (string_of_expr k) (string_of_expr v) 
   | Lambda ([], body) -> sprintf "(lambda - %s)" (string_of_expr body)
   | Lambda (params, body) -> sprintf "(lambda (%s) %s)" (String.concat " " params) (string_of_expr body)
+  | LetRec (recs, body) -> sprintf "(letrec (%s) %s)" (String.concat " " (List.map (
+      fun (name, params, body) -> 
+        sprintf "(%s %s)" name (string_of_expr (Lambda (params, body)))
+        ) recs
+      )) (string_of_expr body)
   and string_of_exprs (e: expr list) : string = 
       match e with
       | [] -> ""
