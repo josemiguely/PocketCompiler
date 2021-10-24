@@ -75,9 +75,9 @@ let test_parse_compound () =
   (Prim2 (Add, Prim2 (Add, Num 3L, Id "x"), Num 7L))
 
 let test_parse_error () =
-  let sexp = `List [`List [`Atom "foo"]; `Atom "bar"] in
+  let sexp = `List [`List []; `Atom "bar"] in
   check_raises "Should raise a parse error" 
-    (CTError (Fmt.strf "Not a valid expr: %a" CCSexp.pp sexp))
+    (CTError (Fmt.strf "Not a valid expr: ()"))
     (fun () -> ignore @@ parse_exp sexp)
 
 (* Tests for our [interp] function *)
