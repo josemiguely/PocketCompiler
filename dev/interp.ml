@@ -184,6 +184,20 @@ let rec interp expr env fenv =
       interp body env fenv
       )
     )
+  | LetRec (recs, body) -> 
+    let env_box = ref [] in
+    let names_n_closures = List.map (
+      fun (name, params, body) ->
+        name, ClosureV (List.length params, (fun vals -> 
+          let env = extend_env params vals !env_box in
+          interp body env fenv
+          )
+        )
+    ) recs in
+    let names, closures = List.split names_n_closures in
+    let env = extend_env names closures env in
+    env_box := env ;
+    interp body env fenv
 
 let interp_prog prog env =
   let defs, expr = prog in
