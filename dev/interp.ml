@@ -7,7 +7,7 @@ exception RTError of string
 type value = 
   | NumV of int64
   | BoolV of bool
-  | TupleV of value list ref
+  | TupleV of value ref list
   | ClosureV of int * (value list -> value)
 
 (* Pretty printing *)
@@ -19,8 +19,8 @@ match v with
         let rec string_of_val_list =
             fun ls -> (match ls with
             | [] -> ""
-            | e::l -> " " ^ string_of_val e ^ string_of_val_list l) in 
-        "(tup"^(string_of_val_list !vals)^")"
+            | e::l -> " " ^ string_of_val !e ^ string_of_val_list l) in 
+        "(tup"^(string_of_val_list vals)^")"
 | ClosureV (arity, _) -> Printf.sprintf "(Closure of arity %d)" arity
 
 (* Lexical Environment *)
@@ -65,28 +65,27 @@ let liftIIB : (int64 -> int64 -> bool) -> value -> value -> value =
     | NumV n1, NumV n2 -> BoolV (op n1 n2)
     | _ -> raise (RTError (Printf.sprintf "Expected two integers, but got %s and %s" (string_of_val e1) (string_of_val e2)))
 
+let get_ref : 'a list -> int64 -> 'a =
+  fun ts n ->
+  (try List.nth ts (Int64.to_int n)
+   with
+   | Failure msg -> raise (RTError msg)
+   | RTError msg -> raise (RTError msg)
+   | e -> raise (RTError ("unknown error in get elem:"^ Printexc.to_string e )))
+
 let get_elem : value -> value -> value =
     fun v1 v2 ->
         match v1, v2 with
-        | TupleV ts, NumV n -> 
-                (try List.nth !ts (Int64.to_int n)
-                with
-                | Failure msg -> raise (RTError msg)
-                | RTError msg -> raise (RTError msg)
-                | e -> raise (RTError ("unknown error in get elem:"^ Printexc.to_string e )))
+      | TupleV ts, NumV n ->
+        !(get_ref ts n)
         | _ -> raise (RTError (Printf.sprintf "Expected tuple in first position and integer in second position, but got %s and %s" (string_of_val v1) (string_of_val v2)))
-
-let rec change : 'a list -> int -> int -> 'a -> 'a list =
-    fun es index n v -> 
-        if index == n 
-        then v :: (List.tl es)
-        else (List.hd es) :: change (List.tl es) (1 + index) n v
 
 let set_elem : value -> value -> value -> value = 
     fun v1 v2 v3 -> 
         match v1,v2 with
-        | TupleV ts, NumV n -> 
-                ts := change !ts 0 (Int64.to_int n) v3 ; TupleV ts
+      | TupleV ts, NumV n ->
+        let elem = get_ref ts n in
+        elem := v3 ; TupleV ts
         | _ -> raise (RTError (Printf.sprintf "Expected tuple in first position and integer in second position, but got %s and %s" (string_of_val v1) (string_of_val v2)))
 
 (* Sys functions *)
@@ -101,7 +100,7 @@ let rec check_type (t : ctype) (v : value) : value =
     match v, t with
     | NumV _, CInt | BoolV _, CBool | _, CAny -> v
     | TupleV vals, CTuple types -> 
-            let _ = List.map2 check_type types !vals in
+            let _ = List.map2 (fun x y -> (check_type x !y)) types vals in
             v
     | NumV _, _ -> raise (RTError (Printf.sprintf "Expected boolean but got %s" (string_of_val v)))
     | BoolV _, _ -> raise (RTError (Printf.sprintf "Expected integer but got %s" (string_of_val v)))
@@ -173,7 +172,7 @@ let rec interp expr env fenv =
       | _ -> raise (RTError (Printf.sprintf "Expected closure of arity %d, but got %s" (List.length args) (string_of_val f)))
     )
   | Tuple exprs -> 
-          TupleV (ref (List.map (fun e -> interp e env fenv) exprs))
+          TupleV (List.map (fun e -> (ref (interp e env fenv))) exprs)
   | Set (e,k,v) ->
           let t = (interp e env fenv) in
           let i = (interp k env fenv) in
