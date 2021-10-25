@@ -9,7 +9,6 @@ let rec parse_exp (sexp : sexp) : expr =
   match sexp with
   | `Atom "true" -> Bool true
   | `Atom "false" -> Bool false
-  | `Atom "tup" -> Tuple []
   | `Atom s -> (
     match Int64.of_string_opt s with Some n -> Num n | None -> Id s )
   | `List (`Atom "tup" :: exprs) -> Tuple (List.map parse_exp exprs)

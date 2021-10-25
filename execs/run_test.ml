@@ -28,6 +28,9 @@ let test_parse_bool () =
 let test_parse_tuple () =
     check exp "same tuple" (parse_exp (`List [`Atom "tup"; `Atom "true" ; `Atom "1"])) (Tuple [(Bool true);(Num 1L)] )
 
+let test_parse_empty_tuple () =
+    check exp "empty tuple" (parse_exp (`List [`Atom "tup"])) (Tuple [] )
+
 let test_parse_add1 () =
   check exp "increment applies" 
   (parse_exp (`List [`Atom "add1" ; `Atom "1"])) 
@@ -147,7 +150,12 @@ let test_interp_fo_fun_1 () =
 let test_interp_tup () =
   let v = (interp (Tuple [Num 12L;Bool true;Tuple []])) empty_env empty_fenv in
   check value "a tuple val" v 
-  (TupleV (ref [NumV 12L;BoolV true; TupleV (ref [])]))
+  (TupleV [(ref (NumV 12L));(ref (BoolV true)); (ref (TupleV []))])
+
+let test_interp_empty_tup () =
+  let v = (interp (Tuple [])) empty_env empty_fenv in
+  check value "an empty tuple val" v 
+  (TupleV [])
 
 let test_interp_get () =
   let v = (interp (Prim2 (Get ,Tuple [Num 12L;Bool true;Tuple []],Num 0L))) empty_env empty_fenv in
@@ -157,7 +165,7 @@ let test_interp_get () =
 let test_interp_set () =
   let v = (interp (Let ("x",(Tuple [Num 12L;Bool true;Tuple []]) , (Let ("foo", (Set (Id "x", Num 1L, Bool false)), (Id "x")))))) empty_env empty_fenv in
   check value "correct set execution" v 
-  (TupleV (ref [NumV 12L;BoolV false; TupleV (ref [])]))
+  (TupleV [(ref (NumV 12L));(ref (BoolV false)); (ref (TupleV []))])
   
 let test_interp_fo_fun_2 () =
   let v = (interp_prog (
