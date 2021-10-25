@@ -72,6 +72,26 @@ let test_parse_let () =
   (parse_exp (`List [`Atom "let" ; `List [`Atom "x" ; `Atom "1"] ; `List [`Atom "let" ; `List [`Atom "y" ; `Atom "7"] ; `Atom "10"] ])) 
   (Let ("x", Num 1L, Let ("y", Num 7L, Num 10L)))
 
+let test_parse_lambda_empty () =
+  check exp "empty params lambda is parsed"
+  (parse_exp (`List [`Atom "lambda" ; `List [] ; `Atom "1"])) 
+  (Lambda ([], Num 1L))
+
+let test_parse_lambda () =
+  check exp "lambda is parsed"
+  (parse_exp (`List [`Atom "lambda" ; `List [`Atom "x" ; `Atom "y"] ; `List [`Atom "+" ; `Atom "x" ; `Atom "y"]])) 
+  (Lambda (["x" ; "y"], Prim2 (Add, Id "x", Id "y")))
+  
+let test_parse_letrec_empty () =
+  check exp "empty letrec is parsed"
+  (parse_exp (`List [`Atom "letrec" ; `List [] ; `Atom "7"])) 
+  (LetRec ([], Num 7L))
+
+let test_parse_letrec () =
+  check exp "letrec is parsed"
+  (parse_exp (`List [`Atom "letrec" ; `List [`List [`Atom "f" ; `List [`Atom "lambda" ; `List [`Atom "x" ; `Atom "y"] ; `List [`Atom "+" ; `Atom "x" ; `Atom "y"]]] ; `List [ `Atom "g" ; `List [`Atom "lambda" ; `List [] ; `Atom "21"]]] ; `List [`Atom "f" ; `List [`Atom "g"] ; `List [`Atom "g"]]])) 
+  (LetRec (["f", ["x" ; "y"], Prim2 (Add, Id "x", Id "y") ; "g", [], Num 21L], Apply (Id "f", [Apply (Id "g", []) ; Apply (Id "g", [])])))
+  
 let test_parse_compound () =
   check exp "same expr"
   (parse_exp (`List [`Atom "+" ; `List [`Atom "+" ; `Atom "3"; `Atom "x"]; `Atom "7"]))
@@ -167,6 +187,26 @@ let test_interp_set () =
   check value "correct set execution" v 
   (TupleV [(ref (NumV 12L));(ref (BoolV false)); (ref (TupleV []))])
   
+let test_interp_lambda_empty () =
+  check string "empty params lambda is parsed"
+  (string_of_val (interp (Lambda ([], Num 1L)) empty_env empty_fenv))
+  (string_of_val (ClosureV (0, (fun _ -> NumV 5L))))
+
+let test_interp_lambda () =
+  check string "lambda is parsed"
+  (string_of_val (interp (Lambda (["x" ; "y"], Prim2 (Add, Id "x", Id "y"))) empty_env empty_fenv))
+  (string_of_val (ClosureV (2, (fun _ -> NumV 5L))))
+  
+let test_interp_letrec_empty () =
+  check value "empty letrec is parsed"
+  (interp (LetRec ([], Num 7L)) empty_env empty_fenv)
+  (NumV 7L) 
+
+let test_interp_letrec () =
+  check value "letrec is parsed"
+  (interp (LetRec (["f", ["x" ; "y"], Prim2 (Add, Id "x", Id "y") ; "g", [], Num 21L], Apply (Id "f", [Apply (Id "g", []) ; Apply (Id "g", [])]))) empty_env empty_fenv)
+  (NumV 42L)
+  
 let test_interp_fo_fun_2 () =
   let v = (interp_prog (
     [DefFun ("f", ["x" ; "y" ; "z"], (Prim2 (Add, (Prim2 (Add, Id "x", Id "y")), Id "z")))],
@@ -241,8 +281,12 @@ let ocaml_tests = [
     test_case "A conjunction" `Quick test_parse_and ;
     test_case "An if clause" `Quick test_parse_fork ;
     test_case "A definition" `Quick test_parse_let ;
+    test_case "A lambda with no parameters" `Quick test_parse_lambda_empty ;
+    test_case "A lambda" `Quick test_parse_lambda ;
+    test_case "A letrec with no lambdas" `Quick test_parse_letrec_empty ;
+    test_case "A letrec with an apply" `Quick test_parse_letrec ;
     test_case "A compound expression" `Quick test_parse_compound ;
-    test_case "An invalid s-expression" `Quick test_parse_error
+    test_case "An invalid s-expression" `Quick test_parse_error ;
   ] ;
   "interp", [
     test_case "A number" `Quick test_interp_num ;
@@ -264,7 +308,11 @@ let ocaml_tests = [
     test_case "A complex application" `Slow test_interp_fo_app_2 ;
     test_case "A compound expression" `Quick test_interp_compound;
     test_case "A get expression" `Slow test_interp_get ;
-    test_case "A set expression" `Slow test_interp_set 
+    test_case "A set expression" `Slow test_interp_set ;
+    test_case "A lambda with no parameters" `Slow test_interp_lambda_empty ;
+    test_case "A lambda" `Slow test_interp_lambda ;
+    test_case "A letrec no lambdas" `Slow test_interp_letrec_empty ;
+    test_case "A letrec" `Slow test_interp_letrec ;
   ] ;
   "errors", [
       test_case "Addition of true" `Quick test_error_III ;
