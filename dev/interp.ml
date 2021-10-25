@@ -21,7 +21,7 @@ match v with
             | [] -> ""
             | e::l -> " " ^ string_of_val !e ^ string_of_val_list l) in 
         "(tup"^(string_of_val_list vals)^")"
-| ClosureV (arity, _) -> Printf.sprintf "(Closure of arity %d)" arity
+| ClosureV (arity, _) -> Printf.sprintf "<clos:%d>" arity
 
 (* Lexical Environment *)
 type env = (string * value) list
