@@ -42,7 +42,6 @@ let rec parse_exp (sexp : sexp) : expr =
     | `Atom "get" -> Prim2 (Get, parse_exp e1, parse_exp e2)
     | `Atom "lambda" -> (
       match e1 with
-      | `Atom "-" -> Lambda ([], parse_exp e2)
       | `List params -> Lambda (List.map parse_arg_name params, parse_exp e2)
       | _ -> raise (CTError (sprintf "Not a valid lambda: %s" (to_string sexp)))
     )
