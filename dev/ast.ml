@@ -15,10 +15,11 @@ type expr =
   | Id of string
   | Let of string * expr * expr
   | If of expr * expr * expr
-  | Apply of expr * expr list
+  | Apply of string * expr list
   | Tuple of expr list 
   | Set of expr * expr * expr 
   | Lambda of string list * expr
+  | LamApply of expr * expr list
   | LetRec of (string * string list * expr) list * expr
 
 (* C function argument types *)
@@ -60,11 +61,11 @@ let rec string_of_expr(e : expr) : string =
     | Get -> "get") (string_of_expr e1) (string_of_expr e2)
   | Let (x, e1, e2) -> sprintf "(let (%s %s) %s)" x (string_of_expr e1) (string_of_expr e2) 
   | If (e1, e2, e3) -> sprintf "(if %s %s %s)" (string_of_expr e1) (string_of_expr e2) (string_of_expr e3)
-  | Apply (fe, ael) -> sprintf "(%s %s)" (string_of_expr fe) (String.concat " " (List.map string_of_expr ael))
+  | Apply (fe, ael) -> sprintf "(%s %s)" fe (String.concat " " (List.map string_of_expr ael))
   | Tuple (exprs) -> sprintf "(tup %s)" (string_of_exprs exprs) 
   | Set (e, k, v) -> sprintf "(set %s %s %s)" (string_of_expr e) (string_of_expr k) (string_of_expr v) 
-  | Lambda ([], body) -> sprintf "(lambda - %s)" (string_of_expr body)
   | Lambda (params, body) -> sprintf "(lambda (%s) %s)" (String.concat " " params) (string_of_expr body)
+  | LamApply (fe, ael) -> sprintf "(%s %s)" (string_of_expr fe) (String.concat " " (List.map string_of_expr ael))
   | LetRec (recs, body) -> sprintf "(letrec (%s) %s)" (String.concat " " (List.map (
       fun (name, params, body) -> 
         sprintf "(%s %s)" name (string_of_expr (Lambda (params, body)))
