@@ -81,6 +81,11 @@ let test_parse_lambda () =
   check exp "lambda is parsed"
   (parse_exp (`List [`Atom "lambda" ; `List [`Atom "x" ; `Atom "y"] ; `List [`Atom "+" ; `Atom "x" ; `Atom "y"]])) 
   (Lambda (["x" ; "y"], Prim2 (Add, Id "x", Id "y")))
+
+let test_parse_lambda_apply () =
+  check exp "lambda application is parsed"
+  (parse_exp (`List [`Atom "@" ; `List [`Atom "lambda" ; `List [`Atom "x" ; `Atom "y"] ; `List [`Atom "+" ; `Atom "x" ; `Atom "y"]] ; `Atom "7" ; `Atom "13"])) 
+  (LamApply ((Lambda (["x" ; "y"], Prim2 (Add, Id "x", Id "y"))), [Num 7L ; Num 13L]))
   
 let test_parse_letrec_empty () =
   check exp "empty letrec is parsed"
@@ -89,8 +94,8 @@ let test_parse_letrec_empty () =
 
 let test_parse_letrec () =
   check exp "letrec is parsed"
-  (parse_exp (`List [`Atom "letrec" ; `List [`List [`Atom "f" ; `List [`Atom "lambda" ; `List [`Atom "x" ; `Atom "y"] ; `List [`Atom "+" ; `Atom "x" ; `Atom "y"]]] ; `List [ `Atom "g" ; `List [`Atom "lambda" ; `List [] ; `Atom "21"]]] ; `List [`Atom "f" ; `List [`Atom "g"] ; `List [`Atom "g"]]])) 
-  (LetRec (["f", ["x" ; "y"], Prim2 (Add, Id "x", Id "y") ; "g", [], Num 21L], Apply (Id "f", [Apply (Id "g", []) ; Apply (Id "g", [])])))
+  (parse_exp (`List [`Atom "letrec" ; `List [`List [`Atom "f" ; `List [`Atom "lambda" ; `List [`Atom "x" ; `Atom "y"] ; `List [`Atom "+" ; `Atom "x" ; `Atom "y"]]] ; `List [ `Atom "g" ; `List [`Atom "lambda" ; `List [] ; `Atom "21"]]] ; `List [`Atom "@" ; `Atom "f" ; `List [`Atom "@" ; `Atom "g"] ; `List [`Atom "@" ; `Atom "g"]]])) 
+  (LetRec (["f", ["x" ; "y"], Prim2 (Add, Id "x", Id "y") ; "g", [], Num 21L], LamApply (Id "f", [LamApply (Id "g", []) ; LamApply (Id "g", [])])))
   
 let test_parse_compound () =
   check exp "same expr"
@@ -100,7 +105,7 @@ let test_parse_compound () =
 let test_parse_error () =
   let sexp = `List [`List []; `Atom "bar"] in
   check_raises "Should raise a parse error" 
-    (CTError (Fmt.strf "Not a valid expr: ()"))
+    (CTError (Fmt.strf "Not a valid expr: (() bar)"))
     (fun () -> ignore @@ parse_exp sexp)
 
 (* Tests for our [interp] function *)
@@ -162,7 +167,7 @@ let test_interp_let_2 () =
 let test_interp_fo_fun_1 () =
   let v = (interp_prog (
     [DefFun ("f", ["x"], (Prim2 (Add, Id "x", Id "x")))],
-    (Apply (Id "f", [Num 2L]))
+    (Apply ("f", [Num 2L]))
   )) empty_env in 
   check value "correct simple function execution" v 
   (NumV 4L)
@@ -197,6 +202,11 @@ let test_interp_lambda () =
   (string_of_val (interp (Lambda (["x" ; "y"], Prim2 (Add, Id "x", Id "y"))) empty_env empty_fenv))
   (string_of_val (ClosureV (2, (fun _ -> NumV 5L))))
   
+let test_interp_lambda_apply () =
+  check value "lambda application is parsed"
+  (interp (LamApply ((Lambda (["x" ; "y"], Prim2 (Add, Id "x", Id "y"))), [Num 7L ; Num 13L])) empty_env empty_fenv)
+  (NumV 20L) 
+  
 let test_interp_letrec_empty () =
   check value "empty letrec is parsed"
   (interp (LetRec ([], Num 7L)) empty_env empty_fenv)
@@ -204,13 +214,13 @@ let test_interp_letrec_empty () =
 
 let test_interp_letrec () =
   check value "letrec is parsed"
-  (interp (LetRec (["f", ["x" ; "y"], Prim2 (Add, Id "x", Id "y") ; "g", [], Num 21L], Apply (Id "f", [Apply (Id "g", []) ; Apply (Id "g", [])]))) empty_env empty_fenv)
+  (interp (LetRec (["f", ["x" ; "y"], Prim2 (Add, Id "x", Id "y") ; "g", [], Num 21L], LamApply (Id "f", [LamApply (Id "g", []) ; LamApply (Id "g", [])]))) empty_env empty_fenv)
   (NumV 42L)
   
 let test_interp_fo_fun_2 () =
   let v = (interp_prog (
     [DefFun ("f", ["x" ; "y" ; "z"], (Prim2 (Add, (Prim2 (Add, Id "x", Id "y")), Id "z")))],
-  (Apply (Id "f" , [Num 2L ; Num 20L ; Num 200L]))
+  (Apply ("f" , [Num 2L ; Num 20L ; Num 200L]))
   )) empty_env in 
   check value "correct complex function execution" v 
   (NumV 222L)
@@ -224,8 +234,8 @@ let test_interp_fo_app_1 () =
       DefFun ("f", ["x" ; "y"], (Prim2 (Add, Id "x", Id "y")));
       DefFun ("g", ["y"], (Prim2 (Add, Num 7L, Id "y")))
     ],
-    (Apply (Id "g", [
-      (Apply (Id "f", [Num 4L ; Num 3L]))
+    (Apply ("g", [
+      (Apply ("f", [Num 4L ; Num 3L]))
     ]))
   )
   ) empty_env)
@@ -237,9 +247,9 @@ let test_interp_fo_app_2 () =
   (
     [
       DefFun ("f", ["x" ; "y"], (Prim2 (Add, Id "x", Id "y")));
-      DefFun ("g", ["x"], (Apply (Id "f", [Id "x" ; Id "x"])))
+      DefFun ("g", ["x"], (Apply ("f", [Id "x" ; Id "x"])))
     ],
-    (Apply (Id "g", [Num 100L]))
+    (Apply ("g", [Num 100L]))
   )
   ) empty_env)
 
