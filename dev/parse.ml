@@ -17,12 +17,14 @@ let rec parse_exp (sexp : sexp) : expr =
   | `Atom s -> (
     match Int64.of_string_opt s with Some n -> Num n | None -> Id s )
   | `List (`Atom "tup" :: exprs) -> Tuple (List.map parse_exp exprs)
+  | `List (`Atom "@" :: e1 :: exprs) -> LamApply (parse_exp e1, List.map parse_exp exprs)
   | `List [eop; e] -> (
     match eop with 
     | `Atom "add1" -> Prim1 (Add1, parse_exp e)
     | `Atom "sub1" -> Prim1 (Sub1, parse_exp e)
     | `Atom "print" -> Prim1 (Print, parse_exp e)  (* comment out this line if providing print via the sys interface *)
-    | _ -> Apply (parse_exp eop, [parse_exp e])
+    | `Atom name -> Apply (name, [parse_exp e])
+    | _ -> raise (CTError (sprintf "Not a valid expr: %s" (to_string sexp)))
     )
   | `List [eop; e1; e2] -> (
     match eop with
@@ -44,11 +46,12 @@ let rec parse_exp (sexp : sexp) : expr =
       | `List params -> Lambda (List.map parse_arg_name params, parse_exp e2)
       | _ -> raise (CTError (sprintf "Not a valid lambda: %s" (to_string sexp)))
     )
-    | _ -> Apply (parse_exp eop, [parse_exp e1 ; parse_exp e2])
+    | `Atom name -> Apply (name, [parse_exp e1 ; parse_exp e2])
+    | _ -> raise (CTError (sprintf "Not a valid expr: %s" (to_string sexp)))
     )
   | `List [`Atom "if"; e1; e2; e3] -> If (parse_exp e1, parse_exp e2, parse_exp e3)
   | `List [ `Atom "set"; e; k; v ] -> Set (parse_exp e, parse_exp k, parse_exp v)
-  | `List (e1 :: e2) -> Apply (parse_exp e1, List.map parse_exp e2)
+  | `List (`Atom name :: e2) -> Apply (name, List.map parse_exp e2)
   | _ -> raise (CTError (sprintf "Not a valid expr: %s" (to_string sexp)))
 
 and parse_recs (recs : sexp list) : (string * string list * expr) list =
