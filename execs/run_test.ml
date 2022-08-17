@@ -80,7 +80,7 @@ let test_parse_compound () =
 let test_parse_error () =
   let sexp = `List [`List [`Atom "foo"]; `Atom "bar"] in
   check_raises "Should raise a parse error" 
-    (CTError (Fmt.strf "Not a valid expr: %a" CCSexp.pp sexp))
+    (CTError (Fmt.str "Not a valid expr: %a" CCSexp.pp sexp))
     (fun () -> ignore @@ parse_exp sexp)
 
 (* Tests for our [interp] function *)
