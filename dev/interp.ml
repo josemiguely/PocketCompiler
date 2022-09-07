@@ -38,20 +38,20 @@ let extend_env : string -> value -> env -> env =
 (* interpreter *)
 let rec interp expr env =
   match expr with
-  | Id x -> List.assoc x env
-  | Num n -> NumV n
-  | Bool b -> BoolV b
-  | Prim1 (op, e) -> 
+  | Id (x,_) -> List.assoc x env
+  | Num (n,_) -> NumV n
+  | Bool (b,_) -> BoolV b
+  | Prim1 (op, e,_) -> 
     (match op with
     | Add1 -> liftIII ( Int64.add )
     | Sub1 -> liftIII ( Int64.sub )) (interp e env) (NumV 1L)
-  | Prim2 (op, e1, e2) -> 
+  | Prim2 (op, e1, e2,_) -> 
     (match op with
     | Add -> liftIII ( Int64.add ) 
     | And -> liftBBB ( && ) 
     | Lte -> liftIIB ( <= )) (interp e1 env) (interp e2 env)
-  | Let (x, e , b) -> interp b (extend_env x (interp e env) env)
-  | If (e1, e2, e3) -> 
+  | Let (x, e , b,_) -> interp b (extend_env x (interp e env) env)
+  | If (e1, e2, e3,_) -> 
     (match (interp e1 env) with
     | BoolV b -> if b then interp e2 env else interp e3 env
     | _ -> failwith "runtime type error")
