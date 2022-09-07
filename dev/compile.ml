@@ -39,18 +39,23 @@ let rec lookup name env =
     | h :: t -> (asm_to_string [h]) ^ (asm_to_string t) *)
 
 
+    let const_true = 0xFFFFFFFFFFFFFFFFL (*puros 1*) 
+    let const_false = 0xEFFFFFFFFFFFFFFFL (*puros 1 y un 0 alfinal*)
+
+    let min_int = Int64.div Int64.min_int 2L
+    let max_int = Int64.div Int64.max_int 2L
     
   let rec compile_expr (e : tag expr) (env : env) : instruction list =
     (* print_string (sprintf "%s\n" (string_of_expr e)); *)
     match e with
     | Num (n,_) ->
       (* let shifted = (Int64.shift_left n 1) in *)
-      if n > Int64.max_int || n < Int64.min_int then
+      if n > max_int|| n < min_int then
         failwith ("Integer overflow: " ^ (Int64.to_string n))
       else
         [IMov (Reg(RAX),Const(n))]
-    | Bool (true,_) -> failwith("Boolean t")
-    | Bool (false,_) -> failwith("Boolean f")
+    | Bool (true,_) ->  [IMov (Reg(RAX),Const(const_true))]
+    | Bool (false,_) ->  [IMov (Reg(RAX),Const(const_false))]
     | Prim1 (prim1,expr,_) -> (
       match prim1 with 
       | Add1 -> (compile_expr expr env) @ [IAdd (Reg(RAX),Const(1L))]
@@ -84,6 +89,7 @@ let rec lookup name env =
       let scaffold = (prim2_scaffold expr1 expr2 slot1 slot2 env'') in
       match prim2 with
       | Add ->  scaffold @ [IAdd (Reg(RAX),RegOffset(RSP,slot2))] 
+      | And -> scaffold @ [IAnd (Reg(RAX),RegOffset(RSP,slot2))]
       | _ -> failwith("tonto aun faltan las demás prim2")
   
       )  
@@ -111,11 +117,7 @@ prelude ^ asm_to_string (instrs @ [ IRet ])
 let () =
   (* let input_file = (open_in (Sys.argv.(1))) in *)
   (* let input_program = Int64.of_string (input_line input_file) in *)
-  let input_program = "(let (a 10)
-  (let (c (let (b (add1 a))
-           (let (d (add1 b))
-            (add1 b))))
-   (add1 c)))" in
+  let input_program = "false" in
    let src = Parse.sexp_from_string input_program in
    let prog = tag (Parse.parse_exp src) in
    (* let prog = Let("a",Num 10L,Let("c",Let("b",Prim1(Add1,Id "a"),Let("d",Prim1(Add1,(Id "b")),Prim1(Add1,Id "b"))),Prim1(Add1,Id "c"))) in *)
