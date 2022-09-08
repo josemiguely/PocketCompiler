@@ -1,0 +1,6 @@
+NAME: lessthan
+DESCRIPTION: evaluates a less than
+SRC:
+(< (+ 2 2) 3)
+EXPECTED:
+false

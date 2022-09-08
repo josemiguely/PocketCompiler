@@ -40,26 +40,31 @@ let rec lookup name env =
 
 
     let const_true = 0xFFFFFFFFFFFFFFFFL (*puros 1*) 
-    let const_false = 0xEFFFFFFFFFFFFFFFL (*puros 1 y un 0 alfinal*)
+    let const_false = 0x7FFFFFFFFFFFFFFFL (*puros 1 y un 0 alfinal*)
+
+    let not_mask = 0x8000000000000000L
 
     let min_int = Int64.div Int64.min_int 2L
     let max_int = Int64.div Int64.max_int 2L
+
+    
     
   let rec compile_expr (e : tag expr) (env : env) : instruction list =
     (* print_string (sprintf "%s\n" (string_of_expr e)); *)
     match e with
     | Num (n,_) ->
-      (* let shifted = (Int64.shift_left n 1) in *)
+      let shifted = (Int64.shift_left n 1) in
       if n > max_int|| n < min_int then
         failwith ("Integer overflow: " ^ (Int64.to_string n))
       else
-        [IMov (Reg(RAX),Const(n))]
+        [IMov (Reg(RAX),Const(shifted))]
     | Bool (true,_) ->  [IMov (Reg(RAX),Const(const_true))]
     | Bool (false,_) ->  [IMov (Reg(RAX),Const(const_false))]
     | Prim1 (prim1,expr,_) -> (
-      match prim1 with 
-      | Add1 -> (compile_expr expr env) @ [IAdd (Reg(RAX),Const(1L))]
-      | Sub1 -> (compile_expr expr env) @ [IAdd (Reg(RAX),Const(-1L))]
+      match prim1 with (*add1 (2)*)
+      | Add1 -> (compile_expr expr env) @ [IAdd (Reg(RAX),Const(2L))]
+      | Sub1 -> (compile_expr expr env) @ [IAdd (Reg(RAX),Const(-2L))]
+      | Not -> (compile_expr expr env) @  [IMov (Reg(R10),Const(not_mask))] @ [IXor (Reg(RAX),Reg(R10))] 
       )
     | Let (x,e,b,_) -> 
       let (env',slot) = add x env in
@@ -83,18 +88,25 @@ let rec lookup name env =
       @ [ IJmp(done_label); ILabel(else_label)]
       @ (compile_expr els env)
       @ [ ILabel (done_label)] 
-    | Prim2 (prim2,expr1,expr2,_) -> (
+    | Prim2 (prim2,expr1,expr2,tag) -> (
       let (env',slot1) = add "izq" env in
       let (env'',slot2) = add "der" env' in
-      let scaffold = (prim2_scaffold expr1 expr2 slot1 slot2 env'') in
+      let scaffold = (prim2_scaffold expr1 expr2 slot1 slot2 env'' prim2) in
       match prim2 with
       | Add ->  scaffold @ [IAdd (Reg(RAX),RegOffset(RSP,slot2))] 
       | And -> scaffold @ [IAnd (Reg(RAX),RegOffset(RSP,slot2))]
+      | Lt -> 
+        let less_label = sprintf "less_%d" tag in
+        scaffold @ [ICmp (Reg(RAX),RegOffset(RSP,slot2))] @ [IMov (Reg(RAX),Const(const_true))] @ [IJl (less_label)] @ [IMov (Reg(RAX),Const(const_false))] @ [ILabel (less_label)]
       | _ -> failwith("tonto aun faltan las demás prim2")
   
       )  
 
-    and prim2_scaffold (e1: tag expr) (e2 : tag expr) (slot1 : int)(slot2 : int)(env :env) : instruction list =
+    and prim2_scaffold (e1: tag expr) (e2 : tag expr) (slot1 : int)(slot2 : int)(env :env)(prim2 : prim2 ) : instruction list =
+    
+    match prim2 with
+    (* | And -> failwith("imlpementar cortocirtcuit") *)
+    | _ ->
     (compile_expr e1 env)
     @ [IMov (RegOffset(RSP,1*slot1),Reg(RAX))]
     @ (compile_expr e2 env)
@@ -117,7 +129,7 @@ prelude ^ asm_to_string (instrs @ [ IRet ])
 let () =
   (* let input_file = (open_in (Sys.argv.(1))) in *)
   (* let input_program = Int64.of_string (input_line input_file) in *)
-  let input_program = "false" in
+  let input_program = "(< 2 3)" in
    let src = Parse.sexp_from_string input_program in
    let prog = tag (Parse.parse_exp src) in
    (* let prog = Let("a",Num 10L,Let("c",Let("b",Prim1(Add1,Id "a"),Let("d",Prim1(Add1,(Id "b")),Prim1(Add1,Id "b"))),Prim1(Add1,Id "c"))) in *)

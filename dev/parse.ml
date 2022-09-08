@@ -37,6 +37,7 @@ let rec parse_exp (sexp : sexp) : tag expr =
     match eop with 
     | `Atom "add1" -> Prim1 (Add1, parse_exp e,-1)
     | `Atom "sub1" -> Prim1 (Sub1, parse_exp e,-1)
+    | `Atom "not" -> Prim1 (Not, parse_exp e, -1)
     | _ -> failwith (sprintf "Not a valid expr1: %s" (to_string sexp)) )
   | `List [eop; e1; e2] -> (
     match eop with
@@ -47,6 +48,7 @@ let rec parse_exp (sexp : sexp) : tag expr =
     | `Atom "+" -> Prim2 (Add, parse_exp e1, parse_exp e2,-1)
     | `Atom "and" -> Prim2 (And, parse_exp e1, parse_exp e2,-1)
     | `Atom "<=" -> Prim2 (Lte, parse_exp e1, parse_exp e2,-1)
+    | `Atom "<" -> Prim2 (Lt, parse_exp e1,parse_exp e2,-1)
     | _ -> failwith (sprintf "Not a valid expr2: %s" (to_string sexp)) )
   | `List [`Atom "if"; e1; e2; e3] -> If (parse_exp e1, parse_exp e2, parse_exp e3,-1)
   | _ -> failwith (sprintf "Not a valid expr3: %s" (to_string sexp))
