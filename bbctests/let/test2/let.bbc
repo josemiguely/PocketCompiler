@@ -1,0 +1,9 @@
+NAME: Multiple nested Lets
+DESCRIPTION: applying let binding to a nested expresion
+SRC:
+(let (x 10)         
+ (let (y (add1 x))    
+  (let (z (add1 y))   
+   (add1 z))))        
+EXPECTED:
+|ORACLE

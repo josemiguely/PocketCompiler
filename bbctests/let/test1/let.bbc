@@ -1,0 +1,6 @@
+NAME: A simple let binding 
+DESCRIPTION: applying let binding to an expression
+SRC:
+(let (x 2) (add1 x))
+EXPECTED:
+|ORACLE
