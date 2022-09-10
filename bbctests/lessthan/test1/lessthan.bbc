@@ -1,0 +1,6 @@
+NAME: A false less than operation
+DESCRIPTION: evaluates a less than
+SRC:
+(< (+ 2 2) 3)
+EXPECTED:
+|ORACLE

@@ -1,0 +1,6 @@
+NAME: not true
+DESCRIPTION: evaluates a not true
+SRC:
+(not true)
+EXPECTED:
+|ORACLE

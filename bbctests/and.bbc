@@ -1,6 +1,0 @@
-NAME: and
-DESCRIPTION: evaluates a and
-SRC:
-(and true true)
-EXPECTED:
-true

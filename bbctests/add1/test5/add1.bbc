@@ -1,0 +1,6 @@
+NAME: add1
+DESCRIPTION: add1 for negative numbers equal to 0
+SRC:
+(add1 -1)
+EXPECTED:
+|ORACLE

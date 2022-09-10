@@ -18,7 +18,7 @@ type 'a expr =
 
 type tag = int
 
-
+(** Tagger that tags each node by its position in the AST*)
 let tag (e : 'a expr) : tag expr =
   let rec help (e : 'a expr) (cur : tag) : (tag expr * tag) =
     match e with

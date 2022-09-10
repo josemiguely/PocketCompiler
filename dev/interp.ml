@@ -43,13 +43,18 @@ let rec interp expr env =
   | Bool (b,_) -> BoolV b
   | Prim1 (op, e,_) -> 
     (match op with
-    | Add1 -> liftIII ( Int64.add )
-    | Sub1 -> liftIII ( Int64.sub )) (interp e env) (NumV 1L)
+    | Not -> (let res = interp e env in
+      match res with
+      |BoolV b1 -> BoolV (not b1)
+      | _  -> failwith ("runtime type error")) 
+    | Add1 -> liftIII ( Int64.add ) (interp e env) (NumV 1L)
+    | Sub1 -> liftIII ( Int64.sub ) (interp e env) (NumV 1L)) 
   | Prim2 (op, e1, e2,_) -> 
     (match op with
     | Add -> liftIII ( Int64.add ) 
     | And -> liftBBB ( && ) 
-    | Lte -> liftIIB ( <= )) (interp e1 env) (interp e2 env)
+    | Lte -> liftIIB ( <= )
+    | Lt -> liftIIB ( < )) (interp e1 env) (interp e2 env)
   | Let (x, e , b,_) -> interp b (extend_env x (interp e env) env)
   | If (e1, e2, e3,_) -> 
     (match (interp e1 env) with

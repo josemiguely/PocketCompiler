@@ -1,0 +1,6 @@
+NAME: multiple subtractions of one
+DESCRIPTION: apply sub1 multiple times
+SRC:
+(sub1 (sub1 (sub1 (sub1 (sub1 3)))))
+EXPECTED:
+|ORACLE

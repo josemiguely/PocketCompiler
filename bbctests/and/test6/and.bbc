@@ -1,0 +1,6 @@
+NAME: and
+DESCRIPTION: evaluates a and with inner operations
+SRC:
+(and (not true) (not false))
+EXPECTED:
+|ORACLE

@@ -1,6 +1,0 @@
-NAME: not
-DESCRIPTION: evaluates a not
-SRC:
-(not true)
-EXPECTED:
-false

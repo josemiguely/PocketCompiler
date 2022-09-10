@@ -1,0 +1,6 @@
+NAME: and_ff
+DESCRIPTION: evaluates a and with two false
+SRC:
+(and false false)
+EXPECTED:
+|ORACLE

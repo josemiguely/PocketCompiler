@@ -1,0 +1,6 @@
+NAME: and
+DESCRIPTION: evaluates a and inside a not (Or equivalent)
+SRC:
+(not (and (not true) (not false)))
+EXPECTED:
+|ORACLE

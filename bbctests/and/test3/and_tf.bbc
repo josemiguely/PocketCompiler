@@ -1,0 +1,6 @@
+NAME: and_tf
+DESCRIPTION: evaluates a and with true false (in that order)
+SRC:
+(and true false)
+EXPECTED:
+|ORACLE

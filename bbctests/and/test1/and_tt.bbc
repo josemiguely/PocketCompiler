@@ -1,0 +1,6 @@
+NAME: and_tt
+DESCRIPTION: evaluates a and with two true
+SRC:
+(and true true)
+EXPECTED:
+|ORACLE

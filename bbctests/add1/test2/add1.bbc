@@ -1,0 +1,6 @@
+NAME: add1
+DESCRIPTION: increments a number multiple times with add1
+SRC:
+(add1 (add1 (add1 20)))
+EXPECTED:
+|ORACLE

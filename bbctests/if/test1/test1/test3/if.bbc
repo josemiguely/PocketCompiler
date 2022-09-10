@@ -1,0 +1,10 @@
+NAME: Compose if
+DESCRIPTION: evaluates a complex if expression
+SRC:
+(if (and (< 4 6)(not true)) 
+    (+ 2 12343) 
+    (if (not (< 104 11)) 
+        (+ 21 32)
+        (and false (and true true)))))
+EXPECTED:
+|ORACLE

@@ -1,0 +1,6 @@
+NAME: if_f
+DESCRIPTION: evaluates a if
+SRC:
+(if false 7 8)
+EXPECTED:
+|ORACLE

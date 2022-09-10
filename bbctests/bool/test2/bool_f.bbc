@@ -1,6 +1,6 @@
-NAME: bool
+NAME: bool_t
 DESCRIPTION: evaluates a boolean
 SRC:
-true
+false
 EXPECTED:
 |ORACLE

@@ -1,0 +1,6 @@
+NAME: and_ft
+DESCRIPTION: evaluates a and with false true (in that order)
+SRC:
+(and false true)
+EXPECTED:
+|ORACLE

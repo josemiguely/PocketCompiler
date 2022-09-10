@@ -8,12 +8,13 @@ extern u64 our_code_starts_here() asm("our_code_starts_here");
 
 typedef uint64_t VAL;
 const uint64_t BOOL_TAG   = 0x0000000000000001;
-//const VAL BOOL_TRUE  = 0x1111111111111111; // These must be the same values
 const VAL BOOL_TRUE =0xffffffffffffffff;
-const VAL BOOL_FALSE = 0x7fffffffffffffff;; // as chosen in compile.ml
+const VAL BOOL_FALSE = 0x7fffffffffffffff; // as chosen in compile.ml
+
+
 VAL print(VAL val) {
   if ((val & BOOL_TAG) == 0) { // val is even ==> number
-    printf("%ld", ((uint64_t)(val)) / 2); // shift bits right to remove tag
+    printf("%ld", ((int64_t)(val)) / 2); // shift bits right to remove tag
   } else if (val == BOOL_TRUE) {
     printf("true");
   } else if (val == BOOL_FALSE) {

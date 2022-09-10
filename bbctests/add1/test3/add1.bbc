@@ -1,0 +1,6 @@
+NAME: add1
+DESCRIPTION: compound add1 with inner operations
+SRC:
+(add1 (if (not true) (add1 (+ 20 21)) (add1 11)))
+EXPECTED:
+|ORACLE

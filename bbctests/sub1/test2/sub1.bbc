@@ -1,0 +1,6 @@
+NAME: subtract one from a positive number
+DESCRIPTION: apply sub1 to a positive number
+SRC:
+(sub1 6)
+EXPECTED:
+|ORACLE

@@ -1,6 +1,6 @@
-NAME: lessthan
+NAME: a true less than operation 
 DESCRIPTION: evaluates a less than
 SRC:
-(< (+ 2 2) 3)
+(< 2 3)
 EXPECTED:
-false
+|ORACLE

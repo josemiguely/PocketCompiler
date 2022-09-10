@@ -1,0 +1,6 @@
+NAME: subtract one from cero
+DESCRIPTION: apply sub1 to cero
+SRC:
+(sub1 0)
+EXPECTED:
+|ORACLE

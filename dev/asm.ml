@@ -28,6 +28,7 @@ type instruction =
   | ICmp of arg * arg (*Compares both args and sets flags*)
   | IJe of string (*Moves execution flow to string label if equal in cmp instruction*)
   | IJl of string (*Moves execution flow to string label if less than in cmp instruction*)
+  | IJne of string (*Moves execution flow to string label is not equal in cmp instruction*)
   | IJmp of string (* Moves execution flow to string label*)
   | IXor of arg * arg
   | ILabel of string (*Section of code*)
@@ -57,6 +58,7 @@ let rec asm_to_string (asm : instruction list) : string =
   | [IAnd (arg1,arg2)] -> sprintf "  and %s, %s\n" (pp_arg arg1) (pp_arg arg2)
   | [IXor (arg1,arg2)] -> sprintf "  xor %s, %s\n" (pp_arg arg1) (pp_arg arg2)
   | [IJe (arg1)] -> sprintf "  je %s\n" (arg1)
+  | [IJne (arg1)] -> sprintf "  jne %s\n" (arg1)
   | [IJl (arg1)] -> sprintf "  jl %s\n" (arg1)
   | [IJmp (arg1)] -> sprintf "  jmp %s\n" (arg1)
   | [ILabel (arg1)] -> sprintf " %s:\n" (arg1)

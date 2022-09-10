@@ -1,0 +1,6 @@
+NAME: multiple not 
+DESCRIPTION: evaluates multiple not
+SRC:
+(not (not (not (not (not (not true))))))
+EXPECTED:
+|ORACLE

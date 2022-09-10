@@ -1,0 +1,6 @@
+NAME: A complex less than operation 
+DESCRIPTION: evaluates a complex less than
+SRC:
+(< (+ (+ 10 2) (+ 213 2)) (+ 3 (+ 32 2)))
+EXPECTED:
+|ORACLE

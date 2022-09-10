@@ -1,0 +1,6 @@
+NAME: a cero
+DESCRIPTION: evaluates a cero
+SRC:
+0
+EXPECTED:
+|ORACLE
