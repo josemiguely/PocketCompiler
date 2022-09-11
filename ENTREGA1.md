@@ -1,6 +1,8 @@
 # Entrega 1
 
+## Integrantes: Stevens Egli, José Miguel Yuseff
 
+---
 
 ## compile.ml
 
@@ -52,6 +54,23 @@ Se añadieron las siguientes funcionalidades:
 2. Nuevos Registros: *RSP*,*R10*
 
 ---
+
+## ast.ml
+
+Se enriqueció el AST con tagging para identificar únicamente cada label creada en assembler. Este tagging enumera los nodos del árbol con el fin de que cada nodo sea distinto.
+Un tagging igual a -1 es un tagging inválido.
+
+Para realizar una compilación completa el flujo de ejecución es el siguiente:
+```ocaml
+(compile (tag (parse_exp (sexp_from_string s))))
+```
+
+---
+
+## interp.ml
+
+Se añadio evaluación de operador lógico Not.
+
 
 ## Testing
 

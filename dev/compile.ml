@@ -17,8 +17,8 @@ let rec lookup name env =
       let slot = 1 + (List.length env) in
       ((name,slot)::env,slot)
 
-    let const_true = 0xFFFFFFFFFFFFFFFFL (*Only 1's*) 
-    let const_false = 0x7FFFFFFFFFFFFFFFL (*Most significant bit with 0 and then all 1's*)
+    let const_true = 0xFFFFFFFFFFFFFFFFL (*true value = only 1's*) 
+    let const_false = 0x7FFFFFFFFFFFFFFFL (*false value = Most significant bit with 0 and then all 1's*)
 
     let not_mask = 0x8000000000000000L (*Not Mask that only captures most significant bit *)
 
@@ -55,7 +55,7 @@ let rec lookup name env =
     | Id (x,_) -> let slot = (lookup x env) in
       [IMov (Reg(RAX),RegOffset(RSP,1*slot))]
     | If (cond,thn,els,tag) ->
-      let else_label = sprintf "if_false_%d" tag in
+      let else_label = sprintf "false_branch_%d" tag in
       let done_label = sprintf "done_%d" tag in
       (compile_expr cond env) @
       [
@@ -79,7 +79,8 @@ let rec lookup name env =
       | _ -> failwith("Unexpected binary operation")
   
       )  
-  
+
+  (** Creates common scaffold for binary operations. For And operation it also includes short-circuit evaluation**)
     and prim2_scaffold (e1: tag expr) (e2 : tag expr) (slot1 : int)(slot2 : int)(env :env)(prim2 : prim2 )(tag:tag) : instruction list =
     
     match prim2 with

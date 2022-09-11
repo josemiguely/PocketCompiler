@@ -4,21 +4,13 @@ open Printf
 type reg =
 | RAX (* the register where we place answers*)
 | RSP (* the stack pointer, below which we can use memory*)
-| R10 (* temporary*)
+| R10 (* temporary register*)
 
 (* arguments for instructions *)
 type arg =
 | Const of int64 (* explicit numeric constants *)
 | Reg of reg (* any named register*)
 | RegOffset of reg * int (*RegOffset(reg,i) represents adress [reg + 8*i]*)
-
-
-(* asm instructions *)
-(* type instruction =
-| IRet *)
-(* | IMov of arg * arg *)
-(* TO BE COMPLETED *)
-
 
 type instruction =
   | IMov of arg * arg (* Move the value of the right-side arg into the left-arg*)
@@ -48,8 +40,8 @@ let pp_arg arg : string =
   | RegOffset (reg,slot) -> sprintf "[%s - 8*%s]" (pp_reg reg) (string_of_int slot)
 
 
+(** Transforms ASM instruction list to string*)
 let rec asm_to_string (asm : instruction list) : string =
-  (*do something to get a string of assembly*)
   match asm with
   | [] -> ""
   | [IMov (arg1,arg2)] -> sprintf "  mov %s, %s\n" (pp_arg arg1) (pp_arg arg2)
@@ -66,14 +58,5 @@ let rec asm_to_string (asm : instruction list) : string =
   | h :: t -> (asm_to_string [h]) ^ (asm_to_string t)
 
 
-
-(* let pp_instr instr : string =
-  match instr with
-  | IRet -> "  ret" 
-  | IMov (a1, a2) -> sprintf "  mov %s, %s" (pp_arg a1) (pp_arg a2) *)
-  (* TO BE COMPLETED *)
-
-(* let pp_instrs (instrs : instruction list) : string =
-  List.fold_left (fun res i -> res ^ "\n" ^ (pp_instr i)) "" instrs *)
 
 

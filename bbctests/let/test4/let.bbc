@@ -1,0 +1,10 @@
+NAME: Let scope testing
+DESCRIPTION: check stack position of variables out of scope
+SRC:
+(let (a 10)                  
+ (let (c (let (b (add1 a))   
+          (let (d (add1 b))  
+           (add1 b))))       
+  (add1 c)))        
+EXPECTED:
+|ORACLE
