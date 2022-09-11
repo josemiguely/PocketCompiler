@@ -1,4 +1,4 @@
-NAME: and_tf
+NAME: true and false
 DESCRIPTION: evaluates a and with true false (in that order)
 SRC:
 (and true false)

@@ -1,0 +1,13 @@
+NAME: nested let operations
+DESCRIPTION: applying let binding to a nested expresion
+SRC:
+(let (x false)         
+  (if x 
+     false 
+     (let (x true) 
+         (if (and x (and (not x) true))
+             (+ 1 44)
+             (let (y true)
+                  (and x y))))))        
+EXPECTED:
+|ORACLE

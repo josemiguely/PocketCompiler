@@ -1,4 +1,4 @@
-NAME: add1
+NAME: Increment by one a negative number 1
 DESCRIPTION: add1 for negative numbers
 SRC:
 (add1 -7)

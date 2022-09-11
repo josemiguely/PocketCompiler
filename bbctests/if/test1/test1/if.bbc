@@ -1,4 +1,4 @@
-NAME: if_t
+NAME: An if true branch evaluation
 DESCRIPTION: evaluates a if
 SRC:
 (if true 7 8)

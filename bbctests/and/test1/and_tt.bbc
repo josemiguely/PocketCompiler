@@ -1,4 +1,4 @@
-NAME: and_tt
+NAME: true and true
 DESCRIPTION: evaluates a and with two true
 SRC:
 (and true true)

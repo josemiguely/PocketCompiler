@@ -1,4 +1,4 @@
-NAME: add1
+NAME: Increment by one multiple times a positive number
 DESCRIPTION: increments a number multiple times with add1
 SRC:
 (add1 (add1 (add1 20)))

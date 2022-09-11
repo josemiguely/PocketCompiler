@@ -1,4 +1,4 @@
-NAME: binary add
+NAME: An add with inner operations
 DESCRIPTION: evaluates a binary add with inner operations
 SRC:
 (+ (add1 (if (not true) 2 3)) (if false (+ 7 11) (+ 8 9)))

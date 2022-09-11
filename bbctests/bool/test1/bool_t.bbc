@@ -1,4 +1,4 @@
-NAME: bool_t
+NAME: A true
 DESCRIPTION: evaluates a boolean
 SRC:
 true

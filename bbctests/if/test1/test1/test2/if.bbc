@@ -1,4 +1,4 @@
-NAME: if_f
+NAME: An if false branch evaluation
 DESCRIPTION: evaluates a if
 SRC:
 (if false 7 8)

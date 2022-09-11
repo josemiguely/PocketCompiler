@@ -1,4 +1,4 @@
-NAME: Compose if
+NAME: An if within an if 
 DESCRIPTION: evaluates a complex if expression
 SRC:
 (if (and (< 4 6)(not true)) 

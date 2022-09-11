@@ -1,4 +1,4 @@
-NAME: and_ff
+NAME: false and false
 DESCRIPTION: evaluates a and with two false
 SRC:
 (and false false)

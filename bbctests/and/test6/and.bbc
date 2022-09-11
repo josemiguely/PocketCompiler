@@ -1,4 +1,4 @@
-NAME: and
+NAME: and with not operations
 DESCRIPTION: evaluates a and with inner operations
 SRC:
 (and (not true) (not false))

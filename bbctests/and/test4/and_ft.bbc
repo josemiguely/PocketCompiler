@@ -1,4 +1,4 @@
-NAME: and_ft
+NAME: false and true
 DESCRIPTION: evaluates a and with false true (in that order)
 SRC:
 (and false true)

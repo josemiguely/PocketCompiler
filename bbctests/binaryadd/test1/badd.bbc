@@ -1,4 +1,4 @@
-NAME: binary add
+NAME: Add two sums 
 DESCRIPTION: evaluates a binary add
 SRC:
 (+ (+ 2 3) (+ 7 11))
