@@ -113,7 +113,7 @@ let rec lookup name env =
 let compile_prog p  : string =
   let _, e = p in
   let instrs = compile_expr (tag e) [] in
-  let prelude ="section .text \n
+  let prelude ="section .text
 global our_code_starts_here
 extern error
 our_code_starts_here:
@@ -122,7 +122,7 @@ mov RBP, RSP
 sub RSP, 100\n" in
 let prologue ="mov RSP, RBP
 pop RBP\n" in
-prelude ^  prologue ^ asm_to_string (instrs @ [ IRet ])
+prelude ^  asm_to_string (instrs) ^ prologue ^ asm_to_string([IRet]) 
 
 
 

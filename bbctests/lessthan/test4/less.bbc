@@ -1,0 +1,6 @@
+NAME: a true less than operation with negative numbers
+DESCRIPTION: evaluates a less than with negative
+SRC:
+(< 4611686018427387903 -4611686018427387904)
+EXPECTED:
+|ORACLE
