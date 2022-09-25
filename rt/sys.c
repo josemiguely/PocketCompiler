@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <inttypes.h>
+#include <stdlib.h>
 
 typedef uint64_t u64;
 
@@ -23,6 +24,32 @@ VAL print(VAL val) {
     printf("Unknown value: %#018x", (unsigned int)val); // print unknown val in hex
   }
   return val;
+}
+
+
+
+//Error codes
+const int ERR_NOT_NUMBER=1;
+const int ERR_NOT_BOOLEAN=2;
+
+void error(int errCode, int val){
+ printf("val is = %10x\n",val);
+
+   if (errCode == ERR_NOT_NUMBER){
+    printf("Expected number, but got ");
+    print(val);
+    
+  }
+
+  else if (errCode == ERR_NOT_BOOLEAN){
+    printf("Expected bolean, but got ");
+    print(val);
+  }
+  else{
+    printf("Not Boolean or Number, mayor bug in code\n");
+  }
+  
+  exit(errCode);
 }
 
 

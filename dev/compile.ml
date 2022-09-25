@@ -50,11 +50,11 @@ let rec lookup name env =
       (*Compile the binding, and get the result into RAX*)
       (compile_expr e env) 
       (* Copy the result in RAX into the appropriate stack slot*)
-      @ [IMov (RegOffset(RSP,1*slot),Reg(RAX))]
+      @ [IMov (RegOffset(RBP,1*slot),Reg(RAX))]
       (* Compile the body, given that x is in the correct slot when it's needed*)
       @ (compile_expr b env')
     | Id (x,_) -> let slot = (lookup x env) in
-      [IMov (Reg(RAX),RegOffset(RSP,1*slot))]
+      [IMov (Reg(RAX),RegOffset(RBP,1*slot))]
     | If (cond,thn,els,tag) ->
       let else_label = sprintf "false_branch_%d" tag in
       let done_label = sprintf "done_%d" tag in
@@ -72,11 +72,11 @@ let rec lookup name env =
       let (env'',slot2) = add "der" env' in
       let scaffold = (prim2_scaffold expr1 expr2 slot1 slot2 env'' prim2 tag) in
       match prim2 with
-      | Add ->  scaffold @ [IAdd (Reg(RAX),RegOffset(RSP,slot2))] 
+      | Add ->  scaffold @ [IAdd (Reg(RAX),RegOffset(RBP,slot2))] 
       | And -> scaffold
       | Lt -> 
         let less_label = sprintf "less_%d" tag in
-        scaffold @ [ICmp (Reg(RAX),RegOffset(RSP,slot2))] @ [IMov (Reg(RAX),Const(const_true))] @ [IJl (less_label)] @ [IMov (Reg(RAX),Const(const_false))] @ [ILabel (less_label)]
+        scaffold @ [ICmp (Reg(RAX),RegOffset(RBP,slot2))] @ [IMov (Reg(RAX),Const(const_true))] @ [IJl (less_label)] @ [IMov (Reg(RAX),Const(const_false))] @ [ILabel (less_label)]
       | _ -> failwith("Unexpected binary operation") ) 
   | Apply(_,_,_) -> failwith("HAY QUE HACERLO")
 
@@ -94,30 +94,35 @@ let rec lookup name env =
         ICmp(Reg(RAX),Reg(R10));
         IJe(done_label);
        ]
-       @ [IMov (RegOffset(RSP,1*slot1),Reg(RAX))]
+       @ [IMov (RegOffset(RBP,1*slot1),Reg(RAX))]
        @ (compile_expr e2 env)
-       @[IMov (RegOffset(RSP,1*slot2),Reg(RAX))]
-       @[IMov (Reg(RAX),RegOffset(RSP,slot1))]
-       @[IAnd (Reg(RAX),RegOffset(RSP,slot2))]
+       @[IMov (RegOffset(RBP,1*slot2),Reg(RAX))]
+       @[IMov (Reg(RAX),RegOffset(RBP,slot1))]
+       @[IAnd (Reg(RAX),RegOffset(RBP,slot2))]
        @[IJmp (done_label)]
        @[ILabel(done_label)]
        
     | _ ->
     (compile_expr e1 env)
-    @ [IMov (RegOffset(RSP,1*slot1),Reg(RAX))]
+    @ [IMov (RegOffset(RBP,1*slot1),Reg(RAX))]
     @ (compile_expr e2 env)
-    @ [IMov (RegOffset(RSP,1*slot2),Reg(RAX))]
-    @ [IMov (Reg(RAX),RegOffset(RSP,slot1))]
+    @ [IMov (RegOffset(RBP,1*slot2),Reg(RAX))]
+    @ [IMov (Reg(RAX),RegOffset(RBP,slot1))]
 
 
 let compile_prog p  : string =
   let _, e = p in
   let instrs = compile_expr (tag e) [] in
-  let prelude ="
-section .text
+  let prelude ="section .text \n
 global our_code_starts_here
-our_code_starts_here:\n" in
-prelude ^ asm_to_string (instrs @ [ IRet ])
+extern error
+our_code_starts_here:
+push RBP
+mov RBP, RSP
+sub RSP, 100\n" in
+let prologue ="mov RSP, RBP
+pop RBP\n" in
+prelude ^  prologue ^ asm_to_string (instrs @ [ IRet ])
 
 
 
