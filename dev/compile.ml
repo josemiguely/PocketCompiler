@@ -40,9 +40,10 @@ let rec lookup name env =
     | Bool (false,_) ->  [IMov (Reg(RAX),Const(const_false))]
     | Prim1 (prim1,expr,_) -> (
       match prim1 with 
+      | Not -> (compile_expr expr env) @  [IMov (Reg(R10),Const(not_mask))] @ [IXor (Reg(RAX),Reg(R10))] 
       | Add1 -> (compile_expr expr env) @ [IAdd (Reg(RAX),Const(2L))]
       | Sub1 -> (compile_expr expr env) @ [IAdd (Reg(RAX),Const(-2L))]
-      | Not -> (compile_expr expr env) @  [IMov (Reg(R10),Const(not_mask))] @ [IXor (Reg(RAX),Reg(R10))] 
+      | Print -> (compile_expr expr env) (*HACER*)
       )
     | Let (x,e,b,_) -> 
       let (env',slot) = add x env in
@@ -76,9 +77,10 @@ let rec lookup name env =
       | Lt -> 
         let less_label = sprintf "less_%d" tag in
         scaffold @ [ICmp (Reg(RAX),RegOffset(RSP,slot2))] @ [IMov (Reg(RAX),Const(const_true))] @ [IJl (less_label)] @ [IMov (Reg(RAX),Const(const_false))] @ [ILabel (less_label)]
-      | _ -> failwith("Unexpected binary operation")
-  
-      )  
+      | _ -> failwith("Unexpected binary operation") ) 
+  | Apply(_,_,_) -> failwith("HAY QUE HACERLO")
+
+      
 
   (** Creates common scaffold for binary operations. For And operation it also includes short-circuit evaluation**)
     and prim2_scaffold (e1: tag expr) (e2 : tag expr) (slot1 : int)(slot2 : int)(env :env)(prim2 : prim2 )(tag:tag) : instruction list =
@@ -108,8 +110,9 @@ let rec lookup name env =
     @ [IMov (Reg(RAX),RegOffset(RSP,slot1))]
 
 
-let compile e : string =
-  let instrs = compile_expr e [] in
+let compile_prog p  : string =
+  let _, e = p in
+  let instrs = compile_expr (tag e) [] in
   let prelude ="
 section .text
 global our_code_starts_here
