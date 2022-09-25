@@ -61,15 +61,32 @@ let tag (e : 'a expr) : tag expr =
       let (tag_tbranch,next_tag_2) = help tbranch (next_tag_1) in
       let (tag_fbranch,next_tag_3) = help fbranch (next_tag_2) in
       (If (tag_cond,tag_tbranch,tag_fbranch,cur),next_tag_3)
-    | Apply (name, e, _) -> (Apply (name, e ,cur),cur+1)(*Arreglar esta parte*)(*Recibe una lista de expresiones , no se como manejarlo u.u*)
+    | Apply (name, e, _) -> (
+      let (tag_list_expr,next_tag)= (tag_list e (cur+1)) in
+      
+      (Apply (name, tag_list_expr ,cur), next_tag))
       (*
       let (tag_e, next_tag) = 
       help (hd e) (cur + 1) in 
       (Apply (name,tag_e,cur),next_tag)
         *)
-  in
-  let (tagged, _) = help e 1 in tagged;;
+      
+      (*  *)
+      and tag_list (expr_list:'a expr list) (cur : tag) :  (tag expr list * tag) =
+      match expr_list with
+      | h::t -> 
+        (let (tag_h,next_tag) = help h (cur) in
+        let (res,res_tag) =(tag_list t next_tag) in
+        ([tag_h] @ res,res_tag))
+      | [] -> ([],cur)
+      
 
+      in
+      
+  let (tagged, _) = help e 1 in tagged;;(*
+let ayuda (list : 'a expr) : tag expr =
+  let curr = 0 
+  List.map (fun l -> let (a,b) = (help l curr)) list *)
 (* Pretty printing - used by testing framework *)
 let rec string_of_expr(e : tag expr) : string = 
 
