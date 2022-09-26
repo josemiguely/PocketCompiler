@@ -17,12 +17,13 @@ type reg =
 type arg =
 | Const of int64 (* explicit numeric constants *)
 | Reg of reg (* any named register*)
-| RegOffset of reg * int (*RegOffset(reg,i) represents adress [reg + 8*i]*)
+| RegOffset of reg * int (*RegOffset(reg,i) represents adress [reg - 8*i]*)
 
 type instruction =
   | IMov of arg * arg (* Move the value of the right-side arg into the left-arg*)
-  | IAdd of arg * arg (*Increment the left-hand arg by the value of the right-hand*)
-  | IMult of arg * arg (*Multiply the left-hand arg by the value of the right hand*)
+  | IAdd of arg * arg (*Increment the left-side arg by the value of the right-side*)
+  | ISub of arg*arg (*Decrement the left-side arg by the right-side arg*)
+  | IMult of arg * arg (*Multiply the left-side arg by the value of the right-side*)
   | IAnd of arg * arg
   | ICmp of arg * arg (*Compares both args and sets flags*)
   | IJe of string (*Moves execution flow to string label if equal in cmp instruction*)
@@ -35,6 +36,7 @@ type instruction =
   | IXor of arg * arg
   | ILabel of string (*Section of code*)
   | ICall of string (*Call function*)
+  | IPush of arg (*Push arg into top of stack*)
   | IRet (*Return*)
 
 

@@ -13,9 +13,14 @@ let rec lookup name env =
     if n = name then i else (lookup name rest)
 
 
-    let add name env : (env * int) =
-      let slot = 1 + (List.length env) in
-      ((name,slot)::env,slot)
+let add name env : (env * int) =
+  let slot = 1 + (List.length env) in
+  ((name,slot)::env,slot)
+
+
+
+
+
 
     let const_true = 0xFFFFFFFFFFFFFFFFL (*true value = only 1's*) 
     let const_false = 0x7FFFFFFFFFFFFFFFL (*false value = Most significant bit with 0 and then all 1's*)
@@ -30,9 +35,7 @@ let rec lookup name env =
    let test_number_instruction = [ITest (Reg(RAX),Const(test_number))] @ [IJnz("error_not_number")]
 
    let test_boolean_instruction = [ITest (Reg(RAX),Const(test_number))] @ [IJz("error_not_boolean")]
-
-    let register_arguments = [Reg(RDI);Reg(RSI);Reg(RDX);Reg(RCX);Reg(R8);Reg(R9)]
-    
+  
   (** Compile AST expressions *)
   let rec compile_expr (e : tag expr) (env : env) : instruction list =
     
@@ -86,7 +89,7 @@ let rec lookup name env =
         let less_label = sprintf "less_%d" tag in
         scaffold @ [ICmp (Reg(RAX),RegOffset(RBP,slot2))] @ [IMov (Reg(RAX),Const(const_true))] @ [IJl (less_label)] @ [IMov (Reg(RAX),Const(const_false))] @ [ILabel (less_label)]
       | _ -> failwith("Unexpected binary operation") ) 
-  | Apply(_,_,_) -> failwith("HAY QUE HACERLO")
+  | Apply(id,expr_list,_) -> failwith("HAY QUE HACERLO")
 
       
 
@@ -126,8 +129,27 @@ let rec lookup name env =
   (* match expr_list with
    h::t -> (compile_expr h) @ [IMov (Reg(RAX),Reg(RAX))] *)
 
+    
+
+let register_arguments = [Reg(RDI);Reg(RSI);Reg(RDX);Reg(RCX);Reg(R8);Reg(R9)]
+
+
+
+let compile_decl (fdef:fundef) : string =
+  match fdef with
+  | DefFun (id,arg_list,expr) -> 
+    let arg_count =   Int64.of_int (List.length arg_list * 8) in
+    asm_to_string([ILabel(id);IPush (Reg(RBP));IMov(Reg(RBP),Reg(RSP));ISub(Reg(RSP),Const(arg_count))] @ compile_expr (tag expr) [])
+  | _ -> failwith("error")
+  
+
+let rec compile_list_fundef (f_list:fundef list) : string =
+  match f_list with
+  | h::t -> compile_decl h ^ compile_list_fundef t
+  | [] -> "" 
+
 let compile_prog p  : string =
-  let _, e = p in
+  let flist, e = p in
   let instrs = compile_expr (tag e) [] in
   let prelude ="section .text
 global our_code_starts_here
@@ -139,7 +161,10 @@ sub RSP, 100\n" in
 let prologue ="mov RSP, RBP
 pop RBP
 " in
-let functions ="
+
+let functions ="" in
+
+let error_functions ="
 
 error_not_number:
 mov RSI,RAX
@@ -151,9 +176,8 @@ mov RSI,RAX
 mov RDI,2
 call error
 " in
-prelude ^  asm_to_string (instrs) ^ prologue ^ asm_to_string([IRet]) ^ functions
+prelude ^  asm_to_string (instrs) ^ prologue ^ asm_to_string([IRet]) ^ error_functions
 
 
 
 
-  

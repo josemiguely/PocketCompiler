@@ -28,6 +28,7 @@ VAL print(VAL val) {
 
 
 
+
 //Error codes
 const int ERR_NOT_NUMBER=1;
 const int ERR_NOT_BOOLEAN=2;

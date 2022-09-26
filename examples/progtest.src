@@ -1,1 +1,1 @@
-(and true 2)
+(+ 22 false)

@@ -27,7 +27,7 @@ type ctype =
 
 (* Function definitions *)
 type fundef =
-  | DefFun of string * string list * tag expr
+  | DefFun of string * string list * tag expr (*Name of function, Name of arguments, Expression*)
   | DefSys of string * ctype list * ctype
 
 let fundef_name(f : fundef) : string =
