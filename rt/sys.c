@@ -32,18 +32,19 @@ VAL print(VAL val) {
 const int ERR_NOT_NUMBER=1;
 const int ERR_NOT_BOOLEAN=2;
 
-void error(int errCode, int val){
- printf("val is = %10x\n",val);
-
+void error(int errCode, VAL val){
+ 
    if (errCode == ERR_NOT_NUMBER){
-    printf("Expected number, but got ");
+    printf("Type error: Expected integer, but got ");
     print(val);
+    // printf("\n");
     
   }
 
   else if (errCode == ERR_NOT_BOOLEAN){
-    printf("Expected bolean, but got ");
+    printf("Type error: Expected boolean, but got ");
     print(val);
+    // printf("\n");
   }
   else{
     printf("Not Boolean or Number, mayor bug in code\n");

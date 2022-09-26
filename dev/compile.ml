@@ -24,7 +24,14 @@ let rec lookup name env =
 
     let min_int = Int64.div Int64.min_int 2L
     let max_int = Int64.div Int64.max_int 2L
+    
+    let test_number = 0x0000000000000001L
 
+   let test_number_instruction = [ITest (Reg(RAX),Const(test_number))] @ [IJnz("error_not_number")]
+
+   let test_boolean_instruction = [ITest (Reg(RAX),Const(test_number))] @ [IJz("error_not_boolean")]
+
+    let register_arguments = [Reg(RDI);Reg(RSI);Reg(RDX);Reg(RCX);Reg(R8);Reg(R9)]
     
   (** Compile AST expressions *)
   let rec compile_expr (e : tag expr) (env : env) : instruction list =
@@ -40,9 +47,9 @@ let rec lookup name env =
     | Bool (false,_) ->  [IMov (Reg(RAX),Const(const_false))]
     | Prim1 (prim1,expr,_) -> (
       match prim1 with 
-      | Not -> (compile_expr expr env) @  [IMov (Reg(R10),Const(not_mask))] @ [IXor (Reg(RAX),Reg(R10))] 
-      | Add1 -> (compile_expr expr env) @ [IAdd (Reg(RAX),Const(2L))]
-      | Sub1 -> (compile_expr expr env) @ [IAdd (Reg(RAX),Const(-2L))]
+      | Not -> (compile_expr expr env) @ test_boolean_instruction  @[IMov (Reg(R10),Const(not_mask))] @ [IXor (Reg(RAX),Reg(R10))] 
+      | Add1 -> (compile_expr expr env) @ test_number_instruction @ [IAdd (Reg(RAX),Const(2L))] 
+      | Sub1 -> (compile_expr expr env) @ test_number_instruction @[IAdd (Reg(RAX),Const(-2L))] 
       | Print -> (compile_expr expr env) (*HACER*)
       )
     | Let (x,e,b,_) -> 
@@ -59,6 +66,7 @@ let rec lookup name env =
       let else_label = sprintf "false_branch_%d" tag in
       let done_label = sprintf "done_%d" tag in
       (compile_expr cond env) @
+      test_boolean_instruction @
       [
        ICmp(Reg(RAX),Const(const_true));
        IJne(else_label)
@@ -89,6 +97,7 @@ let rec lookup name env =
     | And -> 
       let done_label = sprintf "done_%d" tag in
       (compile_expr e1 env) @ 
+      test_boolean_instruction @
       [
         IMov(Reg(R10),Const(const_false));
         ICmp(Reg(RAX),Reg(R10));
@@ -96,6 +105,7 @@ let rec lookup name env =
        ]
        @ [IMov (RegOffset(RBP,1*slot1),Reg(RAX))]
        @ (compile_expr e2 env)
+       @ test_boolean_instruction
        @[IMov (RegOffset(RBP,1*slot2),Reg(RAX))]
        @[IMov (Reg(RAX),RegOffset(RBP,slot1))]
        @[IAnd (Reg(RAX),RegOffset(RBP,slot2))]
@@ -104,11 +114,17 @@ let rec lookup name env =
        
     | _ ->
     (compile_expr e1 env)
+    @ test_number_instruction
     @ [IMov (RegOffset(RBP,1*slot1),Reg(RAX))]
     @ (compile_expr e2 env)
+    @ test_number_instruction
     @ [IMov (RegOffset(RBP,1*slot2),Reg(RAX))]
     @ [IMov (Reg(RAX),RegOffset(RBP,slot1))]
-
+  
+  (* and app_compiler (expr_list ) =
+  2  *)
+  (* match expr_list with
+   h::t -> (compile_expr h) @ [IMov (Reg(RAX),Reg(RAX))] *)
 
 let compile_prog p  : string =
   let _, e = p in
@@ -121,8 +137,21 @@ push RBP
 mov RBP, RSP
 sub RSP, 100\n" in
 let prologue ="mov RSP, RBP
-pop RBP\n" in
-prelude ^  asm_to_string (instrs) ^ prologue ^ asm_to_string([IRet]) 
+pop RBP
+" in
+let functions ="
+
+error_not_number:
+mov RSI,RAX
+mov RDI,1
+call error
+
+error_not_boolean:
+mov RSI,RAX
+mov RDI,2
+call error
+" in
+prelude ^  asm_to_string (instrs) ^ prologue ^ asm_to_string([IRet]) ^ functions
 
 
 

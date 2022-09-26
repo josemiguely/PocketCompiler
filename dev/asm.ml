@@ -6,6 +6,12 @@ type reg =
 | RSP (* the stack pointer, below which we can use memory*)
 | R10 (* temporary register*)
 | RBP (* base pointer*)
+| RDI (*arg 1*)
+| RSI (*arg 2*)
+| RDX (*arg 3*)
+| RCX (*arg 4*)
+| R8 (*arg 5*)
+| R9 (*arg 6*)
 
 (* arguments for instructions *)
 type arg =
@@ -23,9 +29,12 @@ type instruction =
   | IJl of string (*Moves execution flow to string label if less than in cmp instruction*)
   | IJne of string (*Moves execution flow to string label is not equal in cmp instruction*)
   | IJmp of string (* Moves execution flow to string label*)
-  | ITestNumber (*Test if result is a number*)
+  | IJz of string (*Moves execution flow to string label if zero flag is set*)
+  | IJnz of string (*Moves execution flow to string label if not zero flag is set*)
+  | ITest of arg * arg(*Tests two numbers by a logical and*)
   | IXor of arg * arg
   | ILabel of string (*Section of code*)
+  | ICall of string (*Call function*)
   | IRet (*Return*)
 
 
@@ -35,6 +44,12 @@ let pp_reg reg : string =
   | RSP -> "RSP"
   | R10 -> "R10"
   | RBP -> "RBP"
+  | RDI -> "RDI"
+  | RSI -> "RSI"
+  | RDX -> "RDX"
+  | RCX -> "RCX"
+  | R8 -> "R8"
+  | R9 -> "R9"
 
 let pp_arg arg : string =
   match arg with
@@ -55,9 +70,12 @@ let rec asm_to_string (asm : instruction list) : string =
   | [IJe (arg1)] -> sprintf "je %s\n" (arg1)
   | [IJne (arg1)] -> sprintf "jne %s\n" (arg1)
   | [IJl (arg1)] -> sprintf "jl %s\n" (arg1)
+  | [IJz (arg1)] -> sprintf "jz %s\n" (arg1)
+  | [IJnz (arg1)] -> sprintf "jnz %s\n" (arg1)
   | [IJmp (arg1)] -> sprintf "jmp %s\n" (arg1)
   | [ILabel (arg1)] -> sprintf "%s:\n" (arg1)
-  | [ITestNumber]
+  | [ITest (arg1,arg2)] -> sprintf "test %s, %s\n" (pp_arg arg1) (pp_arg arg2)
+  | [ICall (arg1)] -> sprintf "call %s\n" (arg1)
   | [IRet] -> sprintf "ret"
   | h :: t -> (asm_to_string [h]) ^ (asm_to_string t)
 
