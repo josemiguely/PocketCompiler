@@ -1,0 +1,9 @@
+NAME: if condition is a positive integer
+DESCRIPTION: breaks with runtime error because the condition is a number
+STATUS: RT error
+SRC:
+(if 5
+    true
+    false)
+EXPECTED:
+Type error: Expected boolean, but got 5

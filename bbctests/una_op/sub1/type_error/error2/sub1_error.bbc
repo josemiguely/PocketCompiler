@@ -1,0 +1,7 @@
+NAME: subb1 a true value
+DESCRIPTION: breaks with runtime error because the value is a boolean instead of integer
+STATUS: RT error
+SRC:
+(sub1 true)
+EXPECTED:
+Type error: Expected integer, but got true

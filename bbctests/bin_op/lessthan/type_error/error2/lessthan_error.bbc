@@ -1,0 +1,7 @@
+NAME: right less than value as a boolean
+DESCRIPTION: breaks with runtime error because the left value is a boolean instead of integer
+STATUS: RT error
+SRC:
+(< 3 false)
+EXPECTED:
+Type error: Expected integer, but got false

@@ -1,0 +1,7 @@
+NAME: negate a negative integer value
+DESCRIPTION: breaks with runtime error because the value is a integer instead of boolean
+STATUS: RT error
+SRC:
+(not -22)
+EXPECTED:
+Type error: Expected boolean, but got -22

@@ -1,0 +1,7 @@
+NAME: add1 a false value
+DESCRIPTION: breaks with runtime error because the value is a boolean instead of integer
+STATUS: RT error
+SRC:
+(add1 false)
+EXPECTED:
+Type error: Expected integer, but got false

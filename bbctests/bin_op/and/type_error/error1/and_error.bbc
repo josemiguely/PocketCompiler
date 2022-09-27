@@ -1,0 +1,7 @@
+NAME: left and value as an integer
+DESCRIPTION: breaks with runtime error because the left value is a integer instead of bool
+STATUS: RT error
+SRC:
+(and 1 true)
+EXPECTED:
+Type error: Expected boolean, but got 1
