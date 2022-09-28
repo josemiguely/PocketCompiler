@@ -1,0 +1,11 @@
+NAME: function is undefined
+DESCRIPTION: breaks with compile error because arity mismatch
+STATUS: CT error
+SRC:
+(
+  (def (g x) (if (< x 5) 5 x))
+  (def (f x y) (+ (+ 2 x) (g y)))
+  (f 5 3 1)
+)
+EXPECTED:
+Arity mismatch: f expected 2 arguments but got 3
