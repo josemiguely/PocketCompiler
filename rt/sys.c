@@ -15,6 +15,19 @@ const VAL BOOL_FALSE = 0x7fffffffffffffff; // as chosen in compile.ml
 
 VAL print(VAL val) {
   if ((val & BOOL_TAG) == 0) { // val is even ==> number
+    printf(">%ld\n", ((int64_t)(val)) / 2); // shift bits right to remove tag
+  } else if (val == BOOL_TRUE) {
+    printf(">true\n");
+  } else if (val == BOOL_FALSE) {
+    printf(">false\n");
+  } else {
+    printf(">Unknown value: %#018x\n", (unsigned int)val); // print unknown val in hex
+  }
+  return val;
+}
+
+VAL print_res(VAL val) {
+  if ((val & BOOL_TAG) == 0) { // val is even ==> number
     printf("%ld", ((int64_t)(val)) / 2); // shift bits right to remove tag
   } else if (val == BOOL_TRUE) {
     printf("true");
@@ -37,14 +50,14 @@ void error(int errCode, VAL val){
  
    if (errCode == ERR_NOT_NUMBER){
     printf("Type error: Expected integer, but got ");
-    print(val);
+    print_res(val);
     // printf("\n");
     
   }
 
   else if (errCode == ERR_NOT_BOOLEAN){
     printf("Type error: Expected boolean, but got ");
-    print(val);
+    print_res(val);
     // printf("\n");
   }
   else{
@@ -57,7 +70,7 @@ void error(int errCode, VAL val){
 
 int main(int argc, char** argv) {
   u64 result = our_code_starts_here();
-  print(result);
+  print_res(result);
   // printf("choriflay\n");
   // printf("%" PRId64 "\n", result);
   return 0;

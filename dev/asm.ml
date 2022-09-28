@@ -17,7 +17,7 @@ type reg =
 type arg =
 | Const of int64 (* explicit numeric constants *)
 | Reg of reg (* any named register*)
-| RegOffset of reg * int (*RegOffset(reg,i) represents adress [reg - 8*i]*)
+| RegOffset of reg * string * int (*RegOffset(reg,i) represents adress [reg +- 8*i]*)
 
 type instruction =
   | IMov of arg * arg (* Move the value of the right-side arg into the left-arg*)
@@ -37,6 +37,7 @@ type instruction =
   | ILabel of string (*Section of code*)
   | ICall of string (*Call function*)
   | IPush of arg (*Push arg into top of stack*)
+  | IPop of arg (*Pop from top of stack*)
   | IRet (*Return*)
 
 
@@ -57,7 +58,7 @@ let pp_arg arg : string =
   match arg with
   | Const n ->  sprintf "%#Lx" n
   | Reg r -> pp_reg r
-  | RegOffset (reg,slot) -> sprintf "[%s - 8*%s]" (pp_reg reg) (string_of_int slot)
+  | RegOffset (reg,operation,slot) -> sprintf "[%s %s %s]" (pp_reg reg) (operation) (string_of_int slot)
 
 
 (** Transforms ASM instruction list to string*)
@@ -66,6 +67,7 @@ let rec asm_to_string (asm : instruction list) : string =
   | [] -> ""
   | [IMov (arg1,arg2)] -> sprintf "mov %s, %s\n" (pp_arg arg1) (pp_arg arg2)
   | [IAdd (arg1,arg2)]-> sprintf "add %s, %s\n" (pp_arg arg1) (pp_arg arg2)
+  | [ISub (arg1,arg2)] -> sprintf "sub %s, %s\n" (pp_arg arg1) (pp_arg arg2)
   | [ICmp (arg1,arg2)] -> sprintf "cmp %s, %s\n" (pp_arg arg1) (pp_arg arg2)
   | [IAnd (arg1,arg2)] -> sprintf "and %s, %s\n" (pp_arg arg1) (pp_arg arg2)
   | [IXor (arg1,arg2)] -> sprintf "xor %s, %s\n" (pp_arg arg1) (pp_arg arg2)
@@ -78,7 +80,9 @@ let rec asm_to_string (asm : instruction list) : string =
   | [ILabel (arg1)] -> sprintf "%s:\n" (arg1)
   | [ITest (arg1,arg2)] -> sprintf "test %s, %s\n" (pp_arg arg1) (pp_arg arg2)
   | [ICall (arg1)] -> sprintf "call %s\n" (arg1)
-  | [IRet] -> sprintf "ret"
+  | [IPush (arg1)] -> sprintf "push %s\n" (pp_arg arg1)
+  | [IPop (arg1)] -> sprintf "pop %s\n" (pp_arg arg1)
+  | [IRet] -> sprintf "ret\n"
   | h :: t -> (asm_to_string [h]) ^ (asm_to_string t)
 
 
