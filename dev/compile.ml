@@ -18,6 +18,7 @@ let rec lookup name env =
 (*Adds variable with identifier "name" to "env" with a specific "kind"*)
 let add name env kind : (env * int) =
   let slot = 1 + (List.length env) in
+  (* printf ("variable %s in slot %i\n") name slot; *)
   ((name,slot,kind)::env,slot)
 
 
@@ -40,7 +41,7 @@ let add_fun name arity fun_env : (funenv) =
   ((name,arity)::fun_env)
 
 
-    let save_arguments_before_call = [IPush(Reg(R9));IPush(Reg(R8));IPush(Reg(RCX));IPush(Reg(RDX));IPush(Reg(RSI));IPush(Reg(RDI))]
+    let save_register_arguments_before_call = [IPush(Reg(R9));IPush(Reg(R8));IPush(Reg(RCX));IPush(Reg(RDX));IPush(Reg(RSI));IPush(Reg(RDI))]
 
     let pop_arguments_after_call = [IPop(Reg(RDI));IPop(Reg(RSI));IPop(Reg(RDX));IPop(Reg(RCX));IPop(Reg(R8));IPop(Reg(R9))]
     let const_true = 0xFFFFFFFFFFFFFFFFL (*true value = only 1's*) 
@@ -89,7 +90,7 @@ let add_fun name arity fun_env : (funenv) =
       if kind=="local"
         then [IMov (Reg(RAX),RegOffset(RBP,"-",8*slot))]
          else if slot<=6 then [IMov (Reg(RAX),List.nth register_arguments (slot-1))] (*RegOffset(RBP,"+",1*slot)*)
-         else [IMov (Reg(RAX),RegOffset(RBP,"+",8*(slot+2)))]
+         else [IMov (Reg(RAX),RegOffset(RBP,"+",8*(slot-7+2)))]
     | If (cond,thn,els,tag) ->
       let else_label = sprintf "false_branch_%d" tag in
       let done_label = sprintf "done_%d" tag in
@@ -120,7 +121,7 @@ let add_fun name arity fun_env : (funenv) =
     let _ = lookup_fun id funenv arg_number in
     let arg_more_than_6_offset = (arg_number-6)*8 in
     let res = Int64.of_int (max arg_more_than_6_offset 0) in
-    save_arguments_before_call 
+    save_register_arguments_before_call 
     @ instr (* Push arguments from 7 to arg_number*)
     @ [ICall(id)] 
     @ [IAdd(Reg(RSP),Const(res))] 

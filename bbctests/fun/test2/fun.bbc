@@ -1,0 +1,10 @@
+NAME: Eval function with 2 declarations and less than 6 args
+DESCRIPTION: a fun with 2 declarations and 6 < arg
+SRC:
+(
+  (def (g x) (if (< x 5) 5 x))
+  (def (f x y) (+ (+ 2 x) (g y)))
+  (f 5 3)
+)
+EXPECTED:
+|ORACLE
