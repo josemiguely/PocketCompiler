@@ -24,6 +24,7 @@ type instruction =
   | IAdd of arg * arg (*Increment the left-side arg by the value of the right-side*)
   | ISub of arg*arg (*Decrement the left-side arg by the right-side arg*)
   | IMult of arg * arg (*Multiply the left-side arg by the value of the right-side*)
+  | IDiv of arg * arg
   | IAnd of arg * arg
   | ICmp of arg * arg (*Compares both args and sets flags*)
   | IJe of string (*Moves execution flow to string label if equal in cmp instruction*)
@@ -70,6 +71,8 @@ let rec asm_to_string (asm : instruction list) : string =
   | [ISub (arg1,arg2)] -> sprintf "sub %s, %s\n" (pp_arg arg1) (pp_arg arg2)
   | [ICmp (arg1,arg2)] -> sprintf "cmp %s, %s\n" (pp_arg arg1) (pp_arg arg2)
   | [IAnd (arg1,arg2)] -> sprintf "and %s, %s\n" (pp_arg arg1) (pp_arg arg2)
+  | [IMult (arg1,arg2)] -> sprintf "imul %s, %s\n" (pp_arg arg1) (pp_arg arg2)
+  | [IDiv (arg1,arg2)] -> sprintf "divq %s, %s\n" (pp_arg arg1) (pp_arg arg2)
   | [IXor (arg1,arg2)] -> sprintf "xor %s, %s\n" (pp_arg arg1) (pp_arg arg2)
   | [IJe (arg1)] -> sprintf "je %s\n" (arg1)
   | [IJne (arg1)] -> sprintf "jne %s\n" (arg1)

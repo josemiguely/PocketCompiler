@@ -12,16 +12,17 @@ const uint64_t BOOL_TAG   = 0x0000000000000001;
 const VAL BOOL_TRUE =0xffffffffffffffff;
 const VAL BOOL_FALSE = 0x7fffffffffffffff; // as chosen in compile.ml
 
+char * safe_type;
 
 VAL print(VAL val) {
   if ((val & BOOL_TAG) == 0) { // val is even ==> number
-    printf(">%ld\n", ((int64_t)(val)) / 2); // shift bits right to remove tag
+    printf("> %ld\n", ((int64_t)(val)) / 2); // shift bits right to remove tag
   } else if (val == BOOL_TRUE) {
-    printf(">true\n");
+    printf("> true\n");
   } else if (val == BOOL_FALSE) {
-    printf(">false\n");
+    printf("> false\n");
   } else {
-    printf(">Unknown value: %#018x\n", (unsigned int)val); // print unknown val in hex
+    printf("> Unknown value: %#018x\n", (unsigned int)val); // print unknown val in hex
   }
   return val;
 }
@@ -39,7 +40,21 @@ VAL print_res(VAL val) {
   return val;
 }
 
+// void check_overflow (){
 
+//   if(safe_type==1)
+//   return 1
+
+//   else return 2
+// }
+
+// void check_overflow_add (){
+
+//   if(safe_type==1)...
+//   return 1
+
+//   else return 2
+// }
 
 
 //Error codes
@@ -69,6 +84,7 @@ void error(int errCode, VAL val){
 
 
 int main(int argc, char** argv) {
+  safe_type = argv[0];
   u64 result = our_code_starts_here();
   print_res(result);
   // printf("choriflay\n");

@@ -27,7 +27,10 @@ compile:
 	dune exec execs/run_compile.exe $(src)
 
 compile-run: $(subst .src,.run,$(src))
-	./$<
+	./$< 1
+
+compile-run-safe: $(subst .src,.run,$(src))
+	./$< 2
 
 interp: 
 	dune exec execs/run_interp.exe $(src)

@@ -3,7 +3,7 @@ open Printf
 
 (* primitive operators *)
 type prim1 = Add1 | Sub1 | Not | Print
-type prim2 = Add | And | Lte | Lt 
+type prim2 = Add | And | Lte | Lt | Mult | Div | Sub
 
 
 type tag = int
@@ -105,7 +105,10 @@ let rec string_of_expr(e : tag expr) : string =
     | Add -> "+"
     | And -> "and"
     | Lte -> "<="
-    | Lt -> "<") (string_of_expr e1) (string_of_expr e2)
+    | Lt -> "<"
+    | Sub -> "-"
+    | Div -> "/"
+    | Mult -> "*") (string_of_expr e1) (string_of_expr e2)
   | Let (x, e1, e2,_) -> sprintf "(let (%s %s) %s)" x (string_of_expr e1) (string_of_expr e2) 
   | If (e1, e2, e3,_) -> sprintf "(if %s %s %s)" (string_of_expr e1) (string_of_expr e2) (string_of_expr e3)
     

@@ -101,7 +101,10 @@ let rec interp expr env fenv =
     | Add -> liftIII ( Int64.add ) 
     | And -> liftBBB ( && ) 
     | Lte -> liftIIB ( <= )
-    | Lt -> liftIIB ( < )) (interp e1 env fenv) (interp e2 env fenv)
+    | Lt -> liftIIB ( < )
+    | Sub -> liftIII (Int64.sub)
+    | Mult -> liftIII (Int64.mul)
+    | Div -> liftIII (Int64.div)) (interp e1 env fenv) (interp e2 env fenv)
   | Let (x, e , b,_) -> interp b (extend_env [x] [(interp e env fenv)] env) fenv
   | If (e1, e2, e3,_) -> 
     (match interp e1 env fenv with
