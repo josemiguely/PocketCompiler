@@ -1,0 +1,10 @@
+NAME: a fun with 2 declaration, more than 6 args and checking use of arguments after call
+DESCRIPTION: a fun with 2 declarations and 7 args and use of arguments after call
+SRC:
+(
+  (def (f a b c d e f g) (- (- (- (- (- (- a b) c) d) e) f) g))
+  (def (g q w e r t y u) (+ (+ (+ (+ (+ (+ (+ (f 1 2 3 4 5 6 7) q) w) e) r) t) y) u))
+  (g 9 10 11 12 13 14 15)
+)
+EXPECTED:
+|ORACLE

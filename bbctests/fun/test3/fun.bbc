@@ -1,4 +1,4 @@
-NAME: Eval function with 1 declaration and more than 6 args
+NAME: a fun with 1 declaration and more than 6 args
 DESCRIPTION: a fun with 1 declarations and 8 arg
 SRC:
 (

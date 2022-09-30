@@ -20,6 +20,7 @@ let rec lookup name env =
 
 (*Adds variable with identifier "name" to "env" with a specific "kind"*)
 let add name env kind : (env * int) =
+  (* print_string name; *)
   let slot = 1 + (List.length env) in
   ((name,slot,kind)::env,slot)
 
@@ -27,7 +28,7 @@ let add name env kind : (env * int) =
 
   type funenv = (string * int) list
 
-  let rec lookup_fun name fun_env arity =
+  let rec lookup_fun name fun_env arity : int =
     match fun_env with
     | [] -> failwith (sprintf "Undefined function: %s" name)
     | (n,i)::rest->
@@ -45,6 +46,9 @@ let add_fun name arity fun_env : (funenv) =
 
     let save_register_arguments_before_call = [IPush(Reg(R9));IPush(Reg(R8));IPush(Reg(RCX));IPush(Reg(RDX));IPush(Reg(RSI));IPush(Reg(RDI))]
 
+   
+
+
     let pop_arguments_after_call = [IPop(Reg(RDI));IPop(Reg(RSI));IPop(Reg(RDX));IPop(Reg(RCX));IPop(Reg(R8));IPop(Reg(R9))]
     let const_true = 0xFFFFFFFFFFFFFFFFL (*true value = only 1's*) 
     let const_false = 0x7FFFFFFFFFFFFFFFL (*false value = Most significant bit with 0 and then all 1's*)
@@ -61,6 +65,28 @@ let add_fun name arity fun_env : (funenv) =
    let test_boolean_instruction = [ITest (Reg(RAX),Const(test_number))] @ [IJz("error_not_boolean")]
   
    let register_arguments = [Reg(RDI);Reg(RSI);Reg(RDX);Reg(RCX);Reg(R8);Reg(R9)]
+
+   (*Save arguments of actual function / caller before calling a new function*)
+   let rec save_arguments_before_call (arg_count : int) (track_count : int) : instruction list  =
+   (* print_int track_count;  *)
+   if track_count == arg_count
+      then []
+    else 
+      if track_count<6 then  save_arguments_before_call arg_count (track_count+1) @ [IPush(List.nth register_arguments (track_count))] 
+      else [IMov(Reg(RAX),RegOffset(RBP,"+",8))] @ [IPush (Reg(RAX))]
+
+
+
+  (*Restore arguments after calling a new function*)
+  let rec restore_arguments_after_call (arg_count : int) (track_count : int) : instruction list  =
+  (* print_int track_count;   *)
+  if (track_count == arg_count || track_count>=6)
+     then []
+   else 
+    (*if track_count<6 then *)[IPop(List.nth register_arguments (track_count))] @ restore_arguments_after_call arg_count (track_count+1)
+    (* else [IPop (RegOffset(RBP,"+",8*(track_count-7+2)))] *)
+    
+
 
   (** Compile AST expressions *)
   let rec compile_expr (e : tag expr) (env : env) (funenv : funenv) (arg_count : int)  : instruction list =
@@ -89,7 +115,7 @@ let add_fun name arity fun_env : (funenv) =
       (* Compile the body, given that x is in the correct slot when it's needed*)
       @ (compile_expr b env' funenv arg_count)
     | Id (x,_) -> let (slot,kind) = (lookup x env) in
-      (match kind with
+    (match kind with
       | LocalKind -> [IMov (Reg(RAX),RegOffset(RBP,"-",8*slot))]
       | ArgKind  ->(
           if slot<=6 then [IMov (Reg(RAX),List.nth register_arguments (slot-1))] (*RegOffset(RBP,"+",1*slot)*)
@@ -122,16 +148,18 @@ let add_fun name arity fun_env : (funenv) =
         scaffold @ [ICmp (Reg(RAX),RegOffset(RBP,"-",8*slot2))] @ [IMov (Reg(RAX),Const(const_true))] @ [IJl (less_label)] @ [IMov (Reg(RAX),Const(const_false))] @ [ILabel (less_label)]
       | _ -> failwith("Unexpected binary operation") ) 
   | Apply(id,expr_list,_) -> 
-    let instr = arg_list_evaluator expr_list env 0 funenv arg_count in
+    let instr = arg_list_evaluator expr_list env 0 funenv arg_count in (*First we eval Apply arguments*)
     let arg_number = List.length expr_list in
     let _ = lookup_fun id funenv arg_number in
     let arg_more_than_6_offset = (arg_number-6)*8 in
     let res = Int64.of_int (max arg_more_than_6_offset 0) in
-    save_register_arguments_before_call (* save register arguments*)
+    save_arguments_before_call arg_count 0 (* save register arguments*)
     @ instr (* Push arguments from 7 to arg_number*)
     @ [ICall(id)] (* getICall(id) *) 
     @ [IAdd(Reg(RSP),Const(res))] 
-    @ pop_arguments_after_call (*restore the current values of the caller-save argument registers in reverse order from saving them*)
+    @ restore_arguments_after_call arg_count 0
+    
+    (* @ pop_arguments_after_call restore the current values of the caller-save argument registers in reverse order from saving them *)
 
 
       
@@ -169,6 +197,7 @@ let add_fun name arity fun_env : (funenv) =
 
 
     and arg_list_evaluator (arg_exp_list : tag expr list) (env : env) (count:int) (funenv : funenv) (arg_count : int)  =
+    (* print_int count;  *)
     match arg_exp_list with
     | h::t ->
       if count<6 
@@ -225,6 +254,7 @@ our_code_starts_here:
 push RBP
 mov RBP, RSP
 sub RSP, 0x70\n" in
+
 let prologue ="mov RSP, RBP
 pop RBP
 " in
