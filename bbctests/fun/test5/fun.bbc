@@ -3,7 +3,7 @@ DESCRIPTION: a fun with 2 declarations and 7 args and use of arguments after cal
 SRC:
 (
   (def (f a b c d e f g) (- a b))
-  (def (g q w e r t y u) (+ (+ (+ (+ (f -1 -2 -3 -4 -5 -6 -7) (f -1 -2 -3 -4 -5 -6 -7)) q) (f -1 -2 -3 -4 -5 -6 -7)) y))
+  (def (g q w e r t y u) (+ (+ (+ (+ (f -1 -2 -3 -4 -5 -6 -7) (f -1 -2 -3 -4 -5 -6 -7)) y) (f -1 -2 -3 -4 -5 -6 -7)) u))
   (g 1 2 3 4 5 6 7)
 )
 EXPECTED:
