@@ -4,6 +4,9 @@ open Printf
 
 
 
+
+
+
 type kind = 
   | ArgKind
   | LocalKind
@@ -212,7 +215,7 @@ let rec add_list list_variables env kind =
    | [] -> env
 
 
-let rec var_count(ex: 'a expr) : int  =
+let rec var_count(ex: tag expr) : int  =
   match ex with 
   | Prim1(_,e,_) -> 1 + var_count e
   | Prim2(_,e1,e2,_) -> 1 + max (var_count e1) (var_count e2)
@@ -228,7 +231,8 @@ let compile_decl (fdef:fundef) (fun_env : funenv) : (string * funenv) =
     let arg_count =  (List.length arg_list) in
     let new_env = add_list arg_list [] ArgKind in
     let new_fun_env = add_fun id arg_count fun_env in
-    let decl = asm_to_string([ILabel(id);IPush(Reg(RBP));IMov(Reg(RBP),Reg(RSP));ISub(Reg(RSP),Const(112L))] @ (compile_expr (tag expr) new_env new_fun_env arg_count) @ [IMov(Reg(RSP),Reg(RBP))] @ [IPop (Reg(RBP))]  @[IRet]) in
+    let count_of_var = Int64.of_int (16* 16 * (var_count expr)) in
+    let decl = asm_to_string([ILabel(id);IPush(Reg(RBP));IMov(Reg(RBP),Reg(RSP));ISub(Reg(RSP),Const(count_of_var))] @ (compile_expr (tag expr) new_env new_fun_env arg_count) @ [IMov(Reg(RSP),Reg(RBP))] @ [IPop (Reg(RBP))]  @[IRet]) in
     (decl,new_fun_env)
   | _ -> failwith("error")
   
@@ -246,14 +250,15 @@ let compile_prog p  : string =
   let flist, e = p in
   let (functions,funenv) = compile_list_fundef flist [] in
   let instrs = compile_expr (tag e) [] funenv 0 in
-  let prelude ="section .text
+  let count_of_var = 16* 16 * (var_count e) in
+  let prelude =sprintf "section .text
 global our_code_starts_here
 extern error
 extern print
 our_code_starts_here:
 push RBP
 mov RBP, RSP
-sub RSP, 0x70\n" in
+sub RSP, 0x%x\n" count_of_var in
 
 let prologue ="mov RSP, RBP
 pop RBP

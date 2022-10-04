@@ -2,9 +2,9 @@ NAME:  a fun with 2 declaration, more than 6 args and checking use of arguments 
 DESCRIPTION: a fun with 2 declarations and 7 args and use of arguments after call
 SRC:
 (
-  (def (f a b c d e f g) (- a b))
-  (def (g q w e r t y u) (+ (+ (+ (+ (f -1 -2 -3 -4 -5 -6 -7) (f -1 -2 -3 -4 -5 -6 -7)) y) (f -1 -2 -3 -4 -5 -6 -7)) u))
-  (g 1 2 3 4 5 6 7)
+  (def (f a b c d e f g h i) (- (- (- (- (- (- (- (- a b) c) d) e) f) g) h) i))
+  (def (g q w e r t y u n) (+ (+ (+ (+ (+ (+ (+ (+ (+ (f -1 -2 -3 -4 -5 -6 -7 -8 -9) (f -11 -12 -13 -14 -15 -16 -17 -18 -19)) q) w) e) r) t) y) u) n))
+  (g 1 2 3 4 5 6 7 8)
 )
 EXPECTED:
 |ORACLE
