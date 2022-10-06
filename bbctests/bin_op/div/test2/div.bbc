@@ -1,0 +1,6 @@
+NAME: a division by 0
+DESCRIPTION: breaks with runtime error because the right value is zero
+SRC:
+(/ -4 2)
+EXPECTED:
+-2

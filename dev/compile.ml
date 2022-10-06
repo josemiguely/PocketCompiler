@@ -90,7 +90,22 @@ let add_fun name arity fun_env : (funenv) =
     (* else [IPop (RegOffset(RBP,"+",8*(track_count-7+2)))] *)
     
 
+  let call_function_one_argument (funct: string) : instruction list = 
+    [IPush(Reg(RDI))] @[IMov(Reg(RDI),Reg(RAX))] @ [ICall(funct)] @ [IPop (Reg(RDI))]
 
+  let call_function_two_argument (funct: string) : instruction list = 
+    [IPush(Reg(RSI));IPush(Reg(RDI))] @[IMov(Reg(RDI),Reg(RAX))] @ [ICall(funct)] @ [IPop (Reg(RDI));IPop (Reg(RSI))] 
+   (* 
+  let op (instruct :instruction) (slot: tag) : instruction list =
+    match instruct with
+    | IAdd(_,_)-> [IAdd (Reg(RAX),RegOffset(RBP,"-",8*slot))]
+    | IAnd(_,_)-> [IAnd (Reg(RAX),RegOffset(RBP,"-",8*slot))]
+    | IMult(_,_)-> [IMult (Reg(RAX),RegOffset(RBP,"-",8*slot))]
+    | IDiv(_,_)-> [IDiv (Reg(RAX),RegOffset(RBP,"-",8*slot))]
+    | ISub(_,_)-> [ISub (Reg(RAX),RegOffset(RBP,"-",8*slot))] *)
+  
+ 
+    
   (** Compile AST expressions *)
   let rec compile_expr (e : tag expr) (env : env) (funenv : funenv) (arg_count : int)  : instruction list =
     
@@ -108,7 +123,7 @@ let add_fun name arity fun_env : (funenv) =
       | Not -> (compile_expr expr env funenv arg_count) @ test_boolean_instruction  @[IMov (Reg(R10),Const(not_mask))] @ [IXor (Reg(RAX),Reg(R10))] 
       | Add1 -> (compile_expr expr env funenv arg_count) @ test_number_instruction @ [IAdd (Reg(RAX),Const(2L))] 
       | Sub1 -> (compile_expr expr env funenv arg_count) @ test_number_instruction @[IAdd (Reg(RAX),Const(-2L))] 
-      | Print -> (compile_expr expr env funenv arg_count) @ [IMov(Reg(RDI),Reg(RAX))] @ [ICall("print")])
+      | Print -> (compile_expr expr env funenv arg_count) @ (call_function_one_argument "print"))
     | Let (x,e,b,_) -> 
       let (env',slot) = add x env LocalKind in
       (*Compile the binding, and get the result into RAX*)
@@ -141,10 +156,10 @@ let add_fun name arity fun_env : (funenv) =
       let (env'',slot2) = add "der" env' LocalKind in
       let scaffold = (prim2_scaffold expr1 expr2 slot1 slot2 env'' prim2 tag funenv arg_count) in
       match prim2 with
-      | Add ->  scaffold @ [IAdd (Reg(RAX),RegOffset(RBP,"-",8*slot2))] 
-      | Sub -> scaffold @ [ISub (Reg(RAX),RegOffset(RBP,"-",8*slot2))]
-      | Mult -> scaffold @ [IMult(Reg(RAX),RegOffset(RBP,"-",8*slot2))]
-      | Div -> scaffold @ [IDiv (Reg(RAX),RegOffset(RBP,"-",8*slot2))]
+      | Add ->  scaffold @ [IAdd (Reg(RAX),RegOffset(RBP,"-",8*slot2))]
+      | Sub -> scaffold @ [ISub (Reg(RAX),RegOffset(RBP,"-",8*slot2))] 
+      | Mult -> scaffold @ [IMult(Reg(RAX),RegOffset(RBP,"-",8*slot2))] @ call_function_one_argument("check_overflow_mul")
+      | Div -> scaffold @  [IMov (Reg(R10),(RegOffset(RBP,"-",8*slot2)))] @[IDiv(Reg(R10));IShl(Reg(RAX),Const(1L))] 
       | And -> scaffold
       | Lt -> 
         let less_label = sprintf "less_%d" tag in
@@ -187,15 +202,30 @@ let add_fun name arity fun_env : (funenv) =
        @[IAnd (Reg(RAX),RegOffset(RBP,"-",8*slot2))]
        @[IJmp (done_label)]
        @[ILabel(done_label)]
-       
+
+    | Div ->  
+      (compile_expr e1 env funenv arg_count)
+      @ test_number_instruction
+      @ [IMov (RegOffset(RBP,"-",8*slot1),Reg(RAX))]
+      @ (compile_expr e2 env funenv arg_count)
+      @ test_number_instruction
+      @ call_function_one_argument("check_non_zero_denominator")
+   (* se podria compactar mas uwu*)     
+      @ [IMov (RegOffset(RBP,"-",8*slot2),Reg(RAX))]
+      @ [IMov (Reg(RAX),RegOffset(RBP,"-",8*slot1))]  
     | _ ->
-    (compile_expr e1 env funenv arg_count)
-    @ test_number_instruction
-    @ [IMov (RegOffset(RBP,"-",8*slot1),Reg(RAX))]
-    @ (compile_expr e2 env funenv arg_count)
-    @ test_number_instruction
-    @ [IMov (RegOffset(RBP,"-",8*slot2),Reg(RAX))]
-    @ [IMov (Reg(RAX),RegOffset(RBP,"-",8*slot1))]
+      (compile_expr e1 env funenv arg_count)
+      @ test_number_instruction
+      @ [IMov (RegOffset(RBP,"-",8*slot1),Reg(RAX))]
+      @ (compile_expr e2 env funenv arg_count)
+      @ test_number_instruction
+      @ [IMov (RegOffset(RBP,"-",8*slot2),Reg(RAX))]
+      @ [IPush(Reg(RSI))] 
+      @ [IPush(Reg(RDI))] @ [IMov(Reg(RDI),RegOffset(RBP,"-",8*slot1))]
+      @ [IMov(Reg(RSI),RegOffset(RBP,"-",8*slot2))]
+      @ [ICall("check_overflow_add")]
+      @ [IPop (Reg(RDI));IPop (Reg(RSI))]
+      @ [IMov (Reg(RAX),RegOffset(RBP,"-",8*slot1))]
   
 
 
@@ -255,6 +285,10 @@ let compile_prog p  : string =
 global our_code_starts_here
 extern error
 extern print
+extern check_overflow_add
+extern check_overflow_sub
+extern check_overflow_mul
+extern check_non_zero_denominator
 our_code_starts_here:
 push RBP
 mov RBP, RSP

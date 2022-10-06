@@ -1,0 +1,74 @@
+section .text                      
+global our_code_starts_here
+extern error
+extern print
+extern check_overflow_add
+extern check_overflow_sub
+extern check_overflow_mul
+extern check_non_zero_denominator
+our_code_starts_here:
+push RBP
+mov RBP, RSP
+sub RSP, 0x300
+mov RAX, 0x4
+test RAX, 0x1
+jnz error_not_number
+mov [RBP - 24], RAX
+mov RAX, 0x6
+test RAX, 0x1
+jnz error_not_number
+mov [RBP - 32], RAX
+push RSI
+mov RSI, [RBP - 32]
+push RDI
+mov RDI, [RBP - 24]
+call check_overflow_add
+pop RDI
+pop RSI
+mov RAX, [RBP - 24]
+add RAX, [RBP - 32]
+test RAX, 0x1
+jnz error_not_number
+mov [RBP - 8], RAX
+mov RAX, 0xe
+test RAX, 0x1
+jnz error_not_number
+mov [RBP - 24], RAX
+mov RAX, 0x16
+test RAX, 0x1
+jnz error_not_number
+mov [RBP - 32], RAX
+push RSI
+mov RSI, [RBP - 32]
+push RDI
+mov RDI, [RBP - 24]
+call check_overflow_add
+pop RDI
+pop RSI
+mov RAX, [RBP - 24]
+add RAX, [RBP - 32]
+test RAX, 0x1
+jnz error_not_number
+mov [RBP - 16], RAX
+push RSI
+mov RSI, [RBP - 16]
+push RDI
+mov RDI, [RBP - 8]
+call check_overflow_add
+pop RDI
+pop RSI
+mov RAX, [RBP - 8]
+add RAX, [RBP - 16]
+mov RSP, RBP
+pop RBP
+ret
+
+error_not_number:
+mov RSI,RAX
+mov RDI,0x1
+call error
+
+error_not_boolean:
+mov RSI,RAX
+mov RDI,0x2
+call error

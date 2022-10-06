@@ -24,7 +24,7 @@ type instruction =
   | IAdd of arg * arg (*Increment the left-side arg by the value of the right-side*)
   | ISub of arg*arg (*Decrement the left-side arg by the right-side arg*)
   | IMult of arg * arg (*Multiply the left-side arg by the value of the right-side*)
-  | IDiv of arg * arg
+  | IDiv of arg
   | IAnd of arg * arg
   | ICmp of arg * arg (*Compares both args and sets flags*)
   | IJe of string (*Moves execution flow to string label if equal in cmp instruction*)
@@ -39,6 +39,7 @@ type instruction =
   | ICall of string (*Call function*)
   | IPush of arg (*Push arg into top of stack*)
   | IPop of arg (*Pop from top of stack*)
+  | IShl of arg * arg
   | IRet (*Return*)
 
 
@@ -72,7 +73,7 @@ let rec asm_to_string (asm : instruction list) : string =
   | [ICmp (arg1,arg2)] -> sprintf "cmp %s, %s\n" (pp_arg arg1) (pp_arg arg2)
   | [IAnd (arg1,arg2)] -> sprintf "and %s, %s\n" (pp_arg arg1) (pp_arg arg2)
   | [IMult (arg1,arg2)] -> sprintf "imul %s, %s\n" (pp_arg arg1) (pp_arg arg2)
-  | [IDiv (arg1,arg2)] -> sprintf "divq %s, %s\n" (pp_arg arg1) (pp_arg arg2)
+  | [IDiv (arg1)] -> sprintf "idiv %s\n" (pp_arg arg1)
   | [IXor (arg1,arg2)] -> sprintf "xor %s, %s\n" (pp_arg arg1) (pp_arg arg2)
   | [IJe (arg1)] -> sprintf "je %s\n" (arg1)
   | [IJne (arg1)] -> sprintf "jne %s\n" (arg1)
@@ -86,6 +87,7 @@ let rec asm_to_string (asm : instruction list) : string =
   | [IPush (arg1)] -> sprintf "push %s\n" (pp_arg arg1)
   | [IPop (arg1)] -> sprintf "pop %s\n" (pp_arg arg1)
   | [IRet] -> sprintf "ret\n"
+  | [IShl (arg1,arg2)] -> sprintf "shl %s, %s\n" (pp_arg arg1) (pp_arg arg2)
   | h :: t -> (asm_to_string [h]) ^ (asm_to_string t)
 
 
