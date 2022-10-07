@@ -120,10 +120,18 @@ let add_fun name arity fun_env : (funenv) =
     | Bool (false,_) ->  [IMov (Reg(RAX),Const(const_false))]
     | Prim1 (prim1,expr,_) -> (
       match prim1 with 
-      | Not -> (compile_expr expr env funenv arg_count) @ test_boolean_instruction  @[IMov (Reg(R10),Const(not_mask))] @ [IXor (Reg(RAX),Reg(R10))] 
-      | Add1 -> (compile_expr expr env funenv arg_count) @ test_number_instruction @ [IAdd (Reg(RAX),Const(2L))] 
-      | Sub1 -> (compile_expr expr env funenv arg_count) @ test_number_instruction @[IAdd (Reg(RAX),Const(-2L))] 
-      | Print -> (compile_expr expr env funenv arg_count) @ (call_function_one_argument "print"))
+      | Not -> (compile_expr expr env funenv arg_count) 
+                @ test_boolean_instruction  
+                @ [IMov (Reg(R10),Const(not_mask))] 
+                @ [IXor (Reg(RAX),Reg(R10))] 
+      | Add1 -> (compile_expr expr env funenv arg_count) 
+                @ test_number_instruction 
+                @ [IAdd (Reg(RAX),Const(2L))] 
+      | Sub1 -> (compile_expr expr env funenv arg_count) 
+                @ test_number_instruction 
+                @ [IAdd (Reg(RAX),Const(-2L))] 
+      | Print -> (compile_expr expr env funenv arg_count) 
+                @ (call_function_one_argument "print"))
     | Let (x,e,b,_) -> 
       let (env',slot) = add x env LocalKind in
       (*Compile the binding, and get the result into RAX*)
@@ -158,12 +166,19 @@ let add_fun name arity fun_env : (funenv) =
       match prim2 with
       | Add ->  scaffold @ [IAdd (Reg(RAX),RegOffset(RBP,"-",8*slot2))]
       | Sub -> scaffold @ [ISub (Reg(RAX),RegOffset(RBP,"-",8*slot2))] 
-      | Mult -> scaffold @ [IMult(Reg(RAX),RegOffset(RBP,"-",8*slot2))] @ call_function_one_argument("check_overflow_mul")
-      | Div -> scaffold @  [IMov (Reg(R10),(RegOffset(RBP,"-",8*slot2)))] @[IDiv(Reg(R10));IShl(Reg(RAX),Const(1L))] 
+      | Mult -> scaffold 
+                @ [IMult(Reg(RAX),RegOffset(RBP,"-",8*slot2))] 
+                @ call_function_one_argument("check_overflow_mul")
+      | Div -> scaffold 
+               @  [IMov (Reg(R10),(RegOffset(RBP,"-",8*slot2)))] 
+               @ [ICqo;IDiv(Reg(R10));IShl(Reg(RAX),Const(1L))] 
       | And -> scaffold
       | Lt -> 
         let less_label = sprintf "less_%d" tag in
-        scaffold @ [ICmp (Reg(RAX),RegOffset(RBP,"-",8*slot2))] @ [IMov (Reg(RAX),Const(const_true))] @ [IJl (less_label)] @ [IMov (Reg(RAX),Const(const_false))] @ [ILabel (less_label)]
+        scaffold 
+        @ [ICmp (Reg(RAX),RegOffset(RBP,"-",8*slot2))] 
+        @ [IMov (Reg(RAX),Const(const_true))] @ [IJl (less_label)] 
+        @ [IMov (Reg(RAX),Const(const_false))] @ [ILabel (less_label)]
       | _ -> failwith("Unexpected binary operation") ) 
   | Apply(id,expr_list,_) -> 
     let instr = arg_list_evaluator expr_list env 0 funenv arg_count in (*First we eval Apply arguments*)
@@ -197,11 +212,11 @@ let add_fun name arity fun_env : (funenv) =
        @ [IMov (RegOffset(RBP,"-",8*slot1),Reg(RAX))]
        @ (compile_expr e2 env funenv arg_count)
        @ test_boolean_instruction
-       @[IMov (RegOffset(RBP,"-",8*slot2),Reg(RAX))]
-       @[IMov (Reg(RAX),RegOffset(RBP,"-",8*slot1))]
-       @[IAnd (Reg(RAX),RegOffset(RBP,"-",8*slot2))]
-       @[IJmp (done_label)]
-       @[ILabel(done_label)]
+       @ [IMov (RegOffset(RBP,"-",8*slot2),Reg(RAX))]
+       @ [IMov (Reg(RAX),RegOffset(RBP,"-",8*slot1))]
+       @ [IAnd (Reg(RAX),RegOffset(RBP,"-",8*slot2))]
+       @ [IJmp (done_label)]
+       @ [ILabel(done_label)]
 
     | Div ->  
       (compile_expr e1 env funenv arg_count)
@@ -209,9 +224,10 @@ let add_fun name arity fun_env : (funenv) =
       @ [IMov (RegOffset(RBP,"-",8*slot1),Reg(RAX))]
       @ (compile_expr e2 env funenv arg_count)
       @ test_number_instruction
-      @ call_function_one_argument("check_non_zero_denominator")
+     
    (* se podria compactar mas uwu*)     
       @ [IMov (RegOffset(RBP,"-",8*slot2),Reg(RAX))]
+      @ call_function_one_argument("check_non_zero_denominator")
       @ [IMov (Reg(RAX),RegOffset(RBP,"-",8*slot1))]  
     | _ ->
       (compile_expr e1 env funenv arg_count)
@@ -234,8 +250,12 @@ let add_fun name arity fun_env : (funenv) =
     match arg_exp_list with
     | h::t ->
       if count<6 
-        then (arg_list_evaluator t env (count+1) funenv arg_count) @ compile_expr h env funenv arg_count @ [IMov(List.nth register_arguments count,Reg(RAX))]
-        else (arg_list_evaluator t env (count+1) funenv arg_count) @ compile_expr h env funenv arg_count @ [IPush(Reg(RAX))]
+        then (arg_list_evaluator t env (count+1) funenv arg_count) 
+              @ compile_expr h env funenv arg_count 
+              @ [IMov(List.nth register_arguments count,Reg(RAX))]
+        else (arg_list_evaluator t env (count+1) funenv arg_count)
+              @ compile_expr h env funenv arg_count 
+              @ [IPush(Reg(RAX))]
     | [] -> []
 
 let rec add_list list_variables env kind =
@@ -262,7 +282,9 @@ let compile_decl (fdef:fundef) (fun_env : funenv) : (string * funenv) =
     let new_env = add_list arg_list [] ArgKind in
     let new_fun_env = add_fun id arg_count fun_env in
     let count_of_var = Int64.of_int (16* 16 * (var_count expr)) in
-    let decl = asm_to_string([ILabel(id);IPush(Reg(RBP));IMov(Reg(RBP),Reg(RSP));ISub(Reg(RSP),Const(count_of_var))] @ (compile_expr (tag expr) new_env new_fun_env arg_count) @ [IMov(Reg(RSP),Reg(RBP))] @ [IPop (Reg(RBP))]  @[IRet]) in
+    let decl = asm_to_string([ILabel(id);IPush(Reg(RBP));IMov(Reg(RBP),Reg(RSP));ISub(Reg(RSP),Const(count_of_var))] 
+              @ (compile_expr (tag expr) new_env new_fun_env arg_count) @ [IMov(Reg(RSP),Reg(RBP))] 
+              @ [IPop (Reg(RBP))] @ [IRet]) in
     (decl,new_fun_env)
   | _ -> failwith("error")
   
