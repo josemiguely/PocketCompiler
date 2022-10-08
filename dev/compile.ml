@@ -8,19 +8,113 @@ type kind =
 
 type env = (string * int * kind) list
 
-(* [IMov(Reg(RAX),RegOffset(RBP,"+",8))] *)
+
+(*Pure functions for registers*)
+
+let getRAX = RAX
+
+let getRSP = RSP
+
+let getR10 = R10
+
+let getRBP = RBP
+
+let getRDI = RDI
+
+let getRSI = RSI
+
+let getRDX = RDX
+
+let getRCX = RCX
+
+
+(*Pure functions for arguments*)
+
+let getConst ( num:int64 ) =
+  Const(num)
+
+let getReg ( reg1:reg ) =
+Reg(reg1)
+
+let getRegOffset (reg1:reg) (op : string) (offset: int) =
+RegOffset(reg1,op,offset)
+
+(*Pure functions for instructions*)
 
 let getIMov (arg1 : arg) (arg2: arg) =
   [IMov(arg1,arg2)]
 
+let getIAdd (arg1 : arg) (arg2 : arg) =
+  [IAdd (arg1,arg2)]
 
-let getReg( reg1:reg ) =
- Reg(reg1)
+let getISub (arg1 : arg) (arg2 : arg) =
+  [ISub (arg1,arg2)]
+  
 
-let getRax = RAX
+let getIMult (arg1 : arg) (arg2 : arg) =
+  [IMult(arg1,arg2)]
 
- let getRegOffset(reg1:reg) (op : string) (offset: int) =
- RegOffset(reg1,op,offset)
+let getIDiv (arg1 : arg) =
+  [IDiv(arg1)]
+
+let getIAnd (arg1 : arg) (arg2 : arg) =
+  [IAnd(arg1,arg2)]
+
+let getICmp (arg1 : arg) (arg2 : arg) =
+  [ICmp(arg1,arg2)]
+
+
+let getIJe (label : string ) =
+  [IJe(label)]
+
+
+let getIJl (label : string ) =
+  [IJl(label)]
+
+
+let getIJne (label : string ) =
+  [IJe(label)]
+
+
+let getIJmp (label : string ) =
+  [IJmp(label)]
+
+
+let getIJz (label : string ) =
+  [IJz(label)]
+
+
+let getIJnz (label : string ) =
+  [IJnz(label)]
+
+let getITest (arg1 : arg) (arg2 : arg) =
+  [ITest(arg1,arg2)]
+
+let getIXor (arg1 : arg) (arg2 : arg)=
+  [IXor(arg1,arg2)]
+
+let getILabel (label : string ) =
+  [ILabel(label)]
+
+let getICall (label : string ) =
+  [ICall(label)]
+
+let getIPush (arg1:arg)  =
+  [IPush (arg1)]
+
+let getIPop (arg1:arg)  =
+  [IPop (arg1)]
+
+let getIShl (arg1 : arg) (arg2 : arg)=
+  [IShl(arg1,arg2)]
+
+let getISar (arg1 : arg) (arg2 : arg)=
+  [ISar(arg1,arg2)]
+
+let getICqo = [ICqo]
+
+let getIRet = [IRet]
+
 
 let rec lookup name env =
   match env with
@@ -51,7 +145,6 @@ let add name env kind : (env * int) =
   
 let add_fun name arity fun_env : (funenv) =
   ((name,arity)::fun_env)
-
 
     let save_register_arguments_before_call = 
       [IPush(Reg(R9));IPush(Reg(R8));IPush(Reg(RCX));IPush(Reg(RDX));IPush(Reg(RSI));IPush(Reg(RDI))]
@@ -176,7 +269,7 @@ let add_fun name arity fun_env : (funenv) =
                 @ [IMult(Reg(RAX),RegOffset(RBP,"-",8*slot2))
                 ;ISar(Reg(RAX),Const(1L))]
       | Div -> scaffold 
-               @  [IMov (Reg(R10),(RegOffset(RBP,"-",8*slot2)))] 
+               @ [IMov (Reg(R10),(RegOffset(RBP,"-",8*slot2)))] 
                @ [ICqo;IDiv(Reg(R10));IShl(Reg(RAX),Const(1L))] 
       | And -> scaffold
       | Lt -> 
@@ -247,16 +340,16 @@ let add_fun name arity fun_env : (funenv) =
       @ [IMov (Reg(RAX),RegOffset(RBP,"-",8*slot1))]
   
 
-
+    (*Evaluates args of a function. It recursively compiles the arg and prepares it for function call*)
+    (*If arg is from the first 6 arguments of the function, then it uses registers, else it pushes the argument to the stack*)
     and arg_list_evaluator (arg_exp_list : tag expr list) (env : env) (count:int) (funenv : funenv) (arg_count : int)  =
-    (* print_int count;  *)
     match arg_exp_list with
     | h::t ->
-      if count<6 
+      if count<6 (*if first 6 arguments, then move argument result to adequate argument register*)
         then (arg_list_evaluator t env (count+1) funenv arg_count) 
               @ compile_expr h env funenv arg_count 
               @ [IMov(List.nth register_arguments count,Reg(RAX))]
-        else (arg_list_evaluator t env (count+1) funenv arg_count)
+        else (arg_list_evaluator t env (count+1) funenv arg_count) (*else push argument result to stack*)
               @ compile_expr h env funenv arg_count 
               @ [IPush(Reg(RAX))]
     | [] -> []
@@ -297,7 +390,9 @@ let rec var_count(ex: tag expr) : int  =
   | Apply (_, e, _) -> 1 + (List.fold_left max 0 (List.map var_count e)) (*agregar max de la lista antes del fold*)
   |_ -> 1
 
-  
+
+(* Compiles a fun definition/declaration*)
+(* It adds the function arguments to env, fun id and arg_count to funenv, and returns new fun environment*)
 let compile_decl (fdef:fundef) (fun_env : funenv) : (string * funenv) =
   match fdef with
   | DefFun (id,arg_list,expr) -> 
@@ -309,10 +404,11 @@ let compile_decl (fdef:fundef) (fun_env : funenv) : (string * funenv) =
               @ (compile_expr (tag expr) new_env new_fun_env arg_count) @ [IMov(Reg(RSP),Reg(RBP))] 
               @ [IPop (Reg(RBP))] @ [IRet]) in
     (decl,new_fun_env)
-  | _ -> failwith("error")
+  | _ -> failwith("Error: DefFun constructor expected in compilation of functions")
   
 
-
+(* Compiles a list of fun definitions/declarations recursively*)
+(* Returns a string of the fun list compilation and the fun environment*)
 let rec compile_list_fundef (f_list:fundef list) (fun_env : funenv) : (string * funenv) =
   match f_list with
   | h::t -> 
@@ -321,6 +417,7 @@ let rec compile_list_fundef (f_list:fundef list) (fun_env : funenv) : (string * 
     ("\n"^ head ^ rest,final_fenv)
   | [] -> ("",fun_env) 
 
+(*Compiles whole program*)
 let compile_prog (p:prog)  : string =
   let flist, e = p in
   let (functions,funenv) = compile_list_fundef flist [] in
