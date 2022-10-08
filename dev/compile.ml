@@ -2,17 +2,25 @@ open Ast
 open Asm
 open Printf
 
-
-
-
-
-
 type kind = 
   | ArgKind
   | LocalKind
 
 type env = (string * int * kind) list
 
+(* [IMov(Reg(RAX),RegOffset(RBP,"+",8))] *)
+
+let getIMov (arg1 : arg) (arg2: arg) =
+  [IMov(arg1,arg2)]
+
+
+let getReg( reg1:reg ) =
+ Reg(reg1)
+
+let getRax = RAX
+
+ let getRegOffset(reg1:reg) (op : string) (offset: int) =
+ RegOffset(reg1,op,offset)
 
 let rec lookup name env =
   match env with
@@ -26,8 +34,6 @@ let add name env kind : (env * int) =
   (* print_string name; *)
   let slot = 1 + (List.length env) in
   ((name,slot,kind)::env,slot)
-
-
 
   type funenv = (string * int) list
 
@@ -47,12 +53,11 @@ let add_fun name arity fun_env : (funenv) =
   ((name,arity)::fun_env)
 
 
-    let save_register_arguments_before_call = [IPush(Reg(R9));IPush(Reg(R8));IPush(Reg(RCX));IPush(Reg(RDX));IPush(Reg(RSI));IPush(Reg(RDI))]
+    let save_register_arguments_before_call = 
+      [IPush(Reg(R9));IPush(Reg(R8));IPush(Reg(RCX));IPush(Reg(RDX));IPush(Reg(RSI));IPush(Reg(RDI))]
 
-   
-
-
-    let pop_arguments_after_call = [IPop(Reg(RDI));IPop(Reg(RSI));IPop(Reg(RDX));IPop(Reg(RCX));IPop(Reg(R8));IPop(Reg(R9))]
+    let pop_arguments_after_call = 
+      [IPop(Reg(RDI));IPop(Reg(RSI));IPop(Reg(RDX));IPop(Reg(RCX));IPop(Reg(R8));IPop(Reg(R9))]
     let const_true = 0xFFFFFFFFFFFFFFFFL (*true value = only 1's*) 
     let const_false = 0x7FFFFFFFFFFFFFFFL (*false value = Most significant bit with 0 and then all 1's*)
 
@@ -82,12 +87,11 @@ let add_fun name arity fun_env : (funenv) =
 
   (*Restore arguments after calling a new function*)
   let rec restore_arguments_after_call (arg_count : int) (track_count : int) : instruction list  =
-  (* print_int track_count;   *)
   if (track_count == arg_count || track_count>=6)
      then []
    else 
-    (*if track_count<6 then *)[IPop(List.nth register_arguments (track_count))] @ restore_arguments_after_call arg_count (track_count+1)
-    (* else [IPop (RegOffset(RBP,"+",8*(track_count-7+2)))] *)
+    [IPop(List.nth register_arguments (track_count))] @ restore_arguments_after_call arg_count (track_count+1)
+    
     
 
   let call_function_one_argument (funct: string) : instruction list = 
@@ -95,20 +99,9 @@ let add_fun name arity fun_env : (funenv) =
 
   let call_function_two_argument (funct: string) : instruction list = 
     [IPush(Reg(RSI));IPush(Reg(RDI))] @[IMov(Reg(RDI),Reg(RAX))] @ [ICall(funct)] @ [IPop (Reg(RDI));IPop (Reg(RSI))] 
-   (* 
-  let op (instruct :instruction) (slot: tag) : instruction list =
-    match instruct with
-    | IAdd(_,_)-> [IAdd (Reg(RAX),RegOffset(RBP,"-",8*slot))]
-    | IAnd(_,_)-> [IAnd (Reg(RAX),RegOffset(RBP,"-",8*slot))]
-    | IMult(_,_)-> [IMult (Reg(RAX),RegOffset(RBP,"-",8*slot))]
-    | IDiv(_,_)-> [IDiv (Reg(RAX),RegOffset(RBP,"-",8*slot))]
-    | ISub(_,_)-> [ISub (Reg(RAX),RegOffset(RBP,"-",8*slot))] *)
   
- 
-    
   (** Compile AST expressions *)
   let rec compile_expr (e : tag expr) (env : env) (funenv : funenv) (arg_count : int)  : instruction list =
-    
     match e with
     | Num (n,_) ->
       let shifted = (Int64.shift_left n 1) in
@@ -126,10 +119,23 @@ let add_fun name arity fun_env : (funenv) =
                 @ [IXor (Reg(RAX),Reg(R10))] 
       | Add1 -> (compile_expr expr env funenv arg_count) 
                 @ test_number_instruction 
-                @ [IAdd (Reg(RAX),Const(2L))] 
+                @ [IPush (Reg(RAX))] (* Push Rax to recover its value after function call*)
+                @ [IPush(Reg(RSI))] @ [IPush(Reg(RDI))] 
+                @ [IMov(Reg(RDI),Reg(RAX))]
+                @ [IMov(Reg(RSI),Const(2L))]
+                @ [ICall("check_overflow_add")]
+                @ [IPop (Reg(RDI));IPop (Reg(RSI));IPop(Reg(RAX))]
+                @ [IAdd (Reg(RAX),Const(2L))]
+
       | Sub1 -> (compile_expr expr env funenv arg_count) 
                 @ test_number_instruction 
-                @ [IAdd (Reg(RAX),Const(-2L))] 
+                @ [IPush (Reg(RAX))] (* Push Rax to recover its value after function call*)
+                @ [IPush(Reg(RSI))] @ [IPush(Reg(RDI))] 
+                @ [IMov(Reg(RDI),Reg(RAX))]
+                @ [IMov(Reg(RSI),Const(-2L))]
+                @ [ICall("check_overflow_sub")]
+                @ [IPop (Reg(RDI));IPop (Reg(RSI));IPop(Reg(RAX))]
+                @ [IAdd (Reg(RAX),Const(-2L))]
       | Print -> (compile_expr expr env funenv arg_count) 
                 @ (call_function_one_argument "print"))
     | Let (x,e,b,_) -> 
@@ -167,8 +173,8 @@ let add_fun name arity fun_env : (funenv) =
       | Add ->  scaffold @ [IAdd (Reg(RAX),RegOffset(RBP,"-",8*slot2))]
       | Sub -> scaffold @ [ISub (Reg(RAX),RegOffset(RBP,"-",8*slot2))] 
       | Mult -> scaffold 
-                @ [IMult(Reg(RAX),RegOffset(RBP,"-",8*slot2))] 
-                @ call_function_one_argument("check_overflow_mul")
+                @ [IMult(Reg(RAX),RegOffset(RBP,"-",8*slot2))
+                ;ISar(Reg(RAX),Const(1L))]
       | Div -> scaffold 
                @  [IMov (Reg(R10),(RegOffset(RBP,"-",8*slot2)))] 
                @ [ICqo;IDiv(Reg(R10));IShl(Reg(RAX),Const(1L))] 
@@ -224,23 +230,20 @@ let add_fun name arity fun_env : (funenv) =
       @ [IMov (RegOffset(RBP,"-",8*slot1),Reg(RAX))]
       @ (compile_expr e2 env funenv arg_count)
       @ test_number_instruction
-     
-   (* se podria compactar mas uwu*)     
       @ [IMov (RegOffset(RBP,"-",8*slot2),Reg(RAX))]
       @ call_function_one_argument("check_non_zero_denominator")
       @ [IMov (Reg(RAX),RegOffset(RBP,"-",8*slot1))]  
+
+    | Add -> opp_bin "check_overflow_add" e1 e2 slot1 slot2 env funenv arg_count
+    | Sub -> opp_bin "check_overflow_sub" e1 e2 slot1 slot2 env funenv arg_count
+    | Mult -> opp_bin "check_overflow_mul" e1 e2 slot1 slot2 env funenv arg_count
     | _ ->
       (compile_expr e1 env funenv arg_count)
       @ test_number_instruction
       @ [IMov (RegOffset(RBP,"-",8*slot1),Reg(RAX))]
       @ (compile_expr e2 env funenv arg_count)
       @ test_number_instruction
-      @ [IMov (RegOffset(RBP,"-",8*slot2),Reg(RAX))]
-      @ [IPush(Reg(RSI))] 
-      @ [IPush(Reg(RDI))] @ [IMov(Reg(RDI),RegOffset(RBP,"-",8*slot1))]
-      @ [IMov(Reg(RSI),RegOffset(RBP,"-",8*slot2))]
-      @ [ICall("check_overflow_add")]
-      @ [IPop (Reg(RDI));IPop (Reg(RSI))]
+      @ [IMov (RegOffset(RBP,"-",8*slot2),Reg(RAX))] 
       @ [IMov (Reg(RAX),RegOffset(RBP,"-",8*slot1))]
   
 
@@ -257,6 +260,26 @@ let add_fun name arity fun_env : (funenv) =
               @ compile_expr h env funenv arg_count 
               @ [IPush(Reg(RAX))]
     | [] -> []
+
+    and opp_bin 
+    (funct : string) (e1: tag expr) (e2 : tag expr) 
+    (slot1 : int)(slot2 : int)(env :env)
+    (funenv : funenv) (arg_count : int): instruction list =
+ 
+       (compile_expr e1 env funenv arg_count)
+       @ test_number_instruction
+       @ [IMov (RegOffset(RBP,"-",8*slot1),Reg(RAX))]
+       @ (compile_expr e2 env funenv arg_count)
+       @ test_number_instruction
+       @ [IMov (RegOffset(RBP,"-",8*slot2),Reg(RAX))]
+       @ [IPush(Reg(RSI))] @ [IPush(Reg(RDI))] 
+       @ [IMov(Reg(RDI),RegOffset(RBP,"-",8*slot1))]
+       @ [IMov(Reg(RSI),RegOffset(RBP,"-",8*slot2))]
+       @ [ICall(funct)]
+       @ [IPop (Reg(RDI));IPop (Reg(RSI))]
+       @ [IMov (Reg(RAX),RegOffset(RBP,"-",8*slot1))]
+   
+
 
 let rec add_list list_variables env kind =
    match list_variables with
@@ -298,7 +321,7 @@ let rec compile_list_fundef (f_list:fundef list) (fun_env : funenv) : (string * 
     ("\n"^ head ^ rest,final_fenv)
   | [] -> ("",fun_env) 
 
-let compile_prog p  : string =
+let compile_prog (p:prog)  : string =
   let flist, e = p in
   let (functions,funenv) = compile_list_fundef flist [] in
   let instrs = compile_expr (tag e) [] funenv 0 in

@@ -1,0 +1,8 @@
+NAME: a sub1 that produces underflow
+DESCRIPTION: breaks with runtime error because it performs a underflow
+STATUS: RT error
+PARAMS: -safe=2
+SRC:
+(sub1 -4611686018427387904)
+EXPECTED:
+Arithmetic error: sub1 produced an overflow

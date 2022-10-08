@@ -1,0 +1,6 @@
+NAME: a division of that returns a negative number
+DESCRIPTION: a division that returns a negative number
+SRC:
+(/ 98 -2)
+EXPECTED:
+|ORACLE

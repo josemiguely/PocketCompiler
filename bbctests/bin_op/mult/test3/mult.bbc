@@ -1,0 +1,6 @@
+NAME: a multiplication of two negative numbers
+DESCRIPTION: a multiplaction of two negatives number, it should return a positive number
+SRC:
+(* -101 -3)
+EXPECTED:
+|ORACLE

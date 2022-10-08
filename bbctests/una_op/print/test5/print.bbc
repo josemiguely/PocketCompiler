@@ -1,0 +1,9 @@
+NAME: a print inside a function
+DESCRIPTION: a print inside a numeric expression
+SRC:
+(
+  (def (f x) (+ 2 (print x)))
+  (f 5)
+)
+EXPECTED:
+|ORACLE

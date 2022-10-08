@@ -29,7 +29,7 @@ VAL print(VAL val) {
 }
 
 VAL print_res(VAL val) {
- // printf("%ld\n", ((int64_t)(val)));
+ //printf("%ld\n", ((int64_t)(val)));
   if ((val & BOOL_TAG) == 0) { // val is even ==> number
     printf("%ld", ((int64_t)(val)) / 2); // shift bits right to remove tag
   } else if (val == BOOL_TRUE) {
@@ -70,48 +70,44 @@ void check_overflow_add (VAL a, VAL b){
   
 
 }
-/*
-void check_overflow_sub (VAL n){
 
-  if(strcmp(safe_type,"2") == 0){
+void check_overflow_sub (VAL a, VAL b){
 
-    if ((int64_t)n/2 > MAXINT){
+  if(*safe_type == '2'){
+
+    if ((int64_t)a/2 > MAXINT/2 + (int64_t)b/2){
       printf("Arithmetic error: - produced an over flow\n");
-      exit(0);
+      exit(-1);
     }
-    else if ((int64_t)n/2 < MININT){
+    else if ((int64_t)a/2 < MININT/2 + (int64_t)b/2){
       printf("Arithmetic error: - produced an under flow\n");
-      exit(0);
+      exit(-1);
     }  
-    
-    //return 1;
   }
-  else {
-  //  return 1;
-  }
+  else {}
 }
 
-void check_overflow_mul (VAL n){
+void check_overflow_mul (VAL a, VAL b){
   
 
-  if(strcmp(safe_type,"2") == 0){
+  if(*safe_type == '2'){
 
-    if ((int64_t)n/4 > MAXINT){
+    if ((int64_t)a/2 > MAXINT/2 / (int64_t)b/2){
       printf("Arithmetic error: * produced an over flow\n");
-      exit(0); // arreglar 
+      exit(-1); // arreglar 
     }
-    else if ((int64_t)n/4 < MININT){
+    else if ((int64_t)a/2 < MININT/2 / (int64_t)b/2){
       printf("Arithmetic error: * produced an under flow\n");
-      exit(0);
+      exit(-1);
     } 
     else {}
   }
 
 }
-*/
+
 void check_non_zero_denominator (VAL d){
 
-  if(1){
+  if(*safe_type == '2'){
 
     if ((int64_t)d/2 == 0){
       printf("Arithmetic error: Division by 0\n");

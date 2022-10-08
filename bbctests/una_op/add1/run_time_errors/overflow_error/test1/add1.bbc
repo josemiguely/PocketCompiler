@@ -1,0 +1,8 @@
+NAME: a add1 that produces overflow
+DESCRIPTION: breaks with runtime error because it performs a overflow
+STATUS: RT error
+PARAMS: -safe=2
+SRC:
+(add1 4611686018427387903)
+EXPECTED:
+Arithmetic error: add1 produced an overflow

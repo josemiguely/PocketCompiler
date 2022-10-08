@@ -1,6 +1,6 @@
-NAME: a division by 0
-DESCRIPTION: breaks with runtime error because the right value is zero
+NAME: multiple divisions between two numbers
+DESCRIPTION: divides two numbers up to 1
 SRC:
-(/ -4 2)
+(/ (/ (/ (/ (/ (/ 64 2) 2) 2) 2) 2) 2)
 EXPECTED:
--2
+|ORACLE

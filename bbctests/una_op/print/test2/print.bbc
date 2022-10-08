@@ -1,0 +1,6 @@
+NAME: a print of a boolean
+DESCRIPTION: a print of a boolean
+SRC:
+(print true)
+EXPECTED:
+|ORACLE

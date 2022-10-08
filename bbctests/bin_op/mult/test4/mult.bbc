@@ -1,0 +1,6 @@
+NAME: a mult that returns a negative number
+DESCRIPTION: a mult that returns a negative number
+SRC:
+(* 93 -2)
+EXPECTED:
+|ORACLE

@@ -1,0 +1,6 @@
+NAME: a division of 0 by any number
+DESCRIPTION: a division 0 of 0 by any number
+SRC:
+(/ 0 10022012)
+EXPECTED:
+|ORACLE

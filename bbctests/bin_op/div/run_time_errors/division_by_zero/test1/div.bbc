@@ -1,6 +1,7 @@
 NAME: a division by 0
 DESCRIPTION: breaks with runtime error because the right value is zero
+STATUS: RT error
 SRC:
-(/ -4 2)
+(/ 1 (- 5 5))
 EXPECTED:
--2
+Arithmetic error: Division by 0

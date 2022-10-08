@@ -1,0 +1,6 @@
+NAME: A sub with inner operations
+DESCRIPTION: evaluates a binary substraction with inner operations
+SRC:
+(- (sub1 (if (not true) 2 3)) (if false (- 7 11) (- 8 9)))
+EXPECTED:
+|ORACLE

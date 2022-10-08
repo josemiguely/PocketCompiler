@@ -39,7 +39,8 @@ type instruction =
   | ICall of string (*Call function*)
   | IPush of arg (*Push arg into top of stack*)
   | IPop of arg (*Pop from top of stack*)
-  | IShl of arg * arg
+  | IShl of arg * arg (* << *)
+  | ISar of arg * arg   (* >> *)
   | ICqo
   | IRet (*Return*)
 
@@ -90,6 +91,7 @@ let rec asm_to_string (asm : instruction list) : string =
   | [IRet] -> sprintf "ret\n"
   | [ICqo] -> sprintf "cqo\n"
   | [IShl (arg1,arg2)] -> sprintf "shl %s, %s\n" (pp_arg arg1) (pp_arg arg2)
+  | [ISar (arg1,arg2)] -> sprintf "sar %s, %s\n" (pp_arg arg1) (pp_arg arg2)
   | h :: t -> (asm_to_string [h]) ^ (asm_to_string t)
 
 

@@ -1,0 +1,6 @@
+NAME: multiple mult with two numbers
+DESCRIPTION: evaluates multiple mults of two numbers
+SRC:
+(* (* (* (* (* (* 2 3) 21) 100) -4) 231) -7)
+EXPECTED:
+|ORACLE

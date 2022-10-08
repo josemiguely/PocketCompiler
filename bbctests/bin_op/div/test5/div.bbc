@@ -1,0 +1,6 @@
+NAME: a division of two negative numbers
+DESCRIPTION: a division of two negative numbers, it should return a positive number
+SRC:
+(/ -104 -2)
+EXPECTED:
+|ORACLE

@@ -1,0 +1,6 @@
+NAME: a print of a number 
+DESCRIPTION: a print of a number
+SRC:
+(print 1)
+EXPECTED:
+|ORACLE
