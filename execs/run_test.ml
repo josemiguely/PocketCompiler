@@ -72,16 +72,7 @@ let test_parse_compound () =
     (fun () -> ignore @@ parse_exp sexp) *)
 
 (* Tests for our [interp] function *)
-let test_interp_num () =
-  check value "same int" (interp (Num (42L,-1)) empty_env empty_fenv) (NumV 42L)
 
-let test_interp_var () =
-  check value "same int" (interp (Id ("x",-1)) ["x", NumV 7L] empty_fenv) (NumV 7L)
-
-let test_interp_compound () =
-  check value "same int"
-    (interp (Prim2 (Add, (Prim2 (Add, Num (3L,-1), (Prim1 (Sub1, Num (6L,-1),-1)),-1)), Num (12L,-1),-1)) empty_env empty_fenv)
-  (NumV 20L)
 let test_parse_error () =
   let sexp = `List [`List [`Atom "foo"]; `Atom "bar"] in
   check_raises "Should raise a parse error" 

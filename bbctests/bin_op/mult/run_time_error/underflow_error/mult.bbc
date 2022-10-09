@@ -1,7 +1,7 @@
 NAME: a mult that produces underflow
 DESCRIPTION: breaks with runtime error because it performs a underflow
 STATUS: RT error
-PARAMS: -safe=2
+PARAMS: safe=2
 SRC:
 (- 4611686018427387902 2)
 EXPECTED:

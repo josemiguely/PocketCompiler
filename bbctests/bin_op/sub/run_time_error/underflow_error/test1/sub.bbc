@@ -1,8 +1,8 @@
 NAME: a sub that produces underflow
-DESCRIPTION: breaks with runtime error because it performs a overflow
+DESCRIPTION: breaks with runtime error because it performs a underflow
 STATUS: RT error
 PARAMS: -safe=2
 SRC:
 (- -4611686018427387904 1)
 EXPECTED:
-Arithmetic error: * produced an underflow
+Arithmetic error: - produced an underflow

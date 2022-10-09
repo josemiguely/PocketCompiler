@@ -58,11 +58,11 @@ void check_overflow_add (VAL a, VAL b){
   if(*safe_type == '2'){ // 2 en ascii
 
     if ((int64_t)a/2 > MAXINT/2 - (int64_t)b/2){
-      printf("Arithmetic error: + produced an over flow\n");
+      printf("Arithmetic error: + produced an overflow\n");
       exit(-1);
     }
     else if ((int64_t)a/2 < MININT/2 - (int64_t)b/2){
-      printf("Arithmetic error: + produced an under flow\n");
+      printf("Arithmetic error: + produced an underflow\n");
       exit(-1);
     }  
     
@@ -76,11 +76,11 @@ void check_overflow_sub (VAL a, VAL b){
   if(*safe_type == '2'){
 
     if ((int64_t)a/2 > MAXINT/2 + (int64_t)b/2){
-      printf("Arithmetic error: - produced an over flow\n");
+      printf("Arithmetic error: - produced an overflow\n");
       exit(-1);
     }
     else if ((int64_t)a/2 < MININT/2 + (int64_t)b/2){
-      printf("Arithmetic error: - produced an under flow\n");
+      printf("Arithmetic error: - produced an underflow\n");
       exit(-1);
     }  
   }
@@ -93,11 +93,11 @@ void check_overflow_mul (VAL a, VAL b){
   if(*safe_type == '2'){
 
     if ((int64_t)a/2 > MAXINT/2 / (int64_t)b/2){
-      printf("Arithmetic error: * produced an over flow\n");
+      printf("Arithmetic error: * produced an overflow\n");
       exit(-1); // arreglar 
     }
     else if ((int64_t)a/2 < MININT/2 / (int64_t)b/2){
-      printf("Arithmetic error: * produced an under flow\n");
+      printf("Arithmetic error: * produced an underflow\n");
       exit(-1);
     } 
     else {}

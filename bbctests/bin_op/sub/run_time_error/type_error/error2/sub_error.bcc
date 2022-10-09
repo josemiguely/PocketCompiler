@@ -1,0 +1,7 @@
+NAME: right substraction value as a bool
+DESCRIPTION: breaks with runtime error because the right value is a bool instead of integer
+STATUS: RT error
+SRC:
+(+ 222 (and true false))
+EXPECTED:
+Type error: Expected integer, but got false

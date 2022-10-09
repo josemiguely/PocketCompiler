@@ -5,4 +5,4 @@ PARAMS: -safe=2
 SRC:
 (sub1 -4611686018427387904)
 EXPECTED:
-Arithmetic error: sub1 produced an overflow
+Arithmetic error: - produced an overflow
