@@ -29,7 +29,6 @@ VAL print(VAL val) {
 }
 
 VAL print_res(VAL val) {
- //printf("%ld\n", ((int64_t)(val)));
   if ((val & BOOL_TAG) == 0) { // val is even ==> number
     printf("%ld", ((int64_t)(val)) / 2); // shift bits right to remove tag
   } else if (val == BOOL_TRUE) {
@@ -45,24 +44,20 @@ VAL print_res(VAL val) {
 
 
 
-const int64_t MAXINT = INT64_MAX;
-const int64_t MININT = INT64_MIN;
+const int64_t MAXINT = INT64_MAX/2;
+const int64_t MININT = INT64_MIN/2;
 
-// strcmp(s1, s2): Returns 0 if s1 and s2 are the same; less than 0 if s1<s2; greater than 0 if s1>s2.
 void check_overflow_add (VAL a, VAL b){
 
-  //printf(" VALOR en OVERFLOW %d\n", *safe_type);
-//printf(" a %d\n", a);
-//printf(" b %d\n", b);
-  //strcpy(safe_type,"2");
   if(*safe_type == '2'){ // 2 en ascii
 
-    if ((int64_t)a/2 > MAXINT/2 - (int64_t)b/2){
-      printf("Arithmetic error: + produced an overflow\n");
+
+    if ((int64_t)a/2 > MAXINT - (int64_t)b/2){
+      printf("Arithmetic error: + produced an overflow");
       exit(-1);
     }
-    else if ((int64_t)a/2 < MININT/2 - (int64_t)b/2){
-      printf("Arithmetic error: + produced an underflow\n");
+    else if ((int64_t)a/2 < MININT - (int64_t)b/2){
+      printf("Arithmetic error: + produced an underflow");
       exit(-1);
     }  
     
@@ -75,12 +70,13 @@ void check_overflow_sub (VAL a, VAL b){
 
   if(*safe_type == '2'){
 
-    if ((int64_t)a/2 > MAXINT/2 + (int64_t)b/2){
-      printf("Arithmetic error: - produced an overflow\n");
+    
+    if ((int64_t)a/2 > MAXINT + (int64_t)b/2){
+      printf("Arithmetic error: - produced an overflow");
       exit(-1);
     }
-    else if ((int64_t)a/2 < MININT/2 + (int64_t)b/2){
-      printf("Arithmetic error: - produced an underflow\n");
+    else if ((int64_t)a/2 < MININT + (int64_t)b/2){
+      printf("Arithmetic error: - produced an underflow");
       exit(-1);
     }  
   }
@@ -89,18 +85,46 @@ void check_overflow_sub (VAL a, VAL b){
 
 void check_overflow_mul (VAL a, VAL b){
   
+  // a * b = c
+  int64_t a2 = ((int64_t)a)/2;
+  int64_t b2 = ((int64_t)b)/2;
 
-  if(*safe_type == '2'){
+  if(*safe_type == '2' && b2 !=0 ){
 
-    if ((int64_t)a/2 > MAXINT/2 / (int64_t)b/2){
-      printf("Arithmetic error: * produced an overflow\n");
-      exit(-1); // arreglar 
+    if (a2 < 0 && b2 < 0 || a2 > 0 && b2 > 0){
+
+   
+    if (a2 > MAXINT / b2){
+      printf("Arithmetic error: * produced an overflow");
+      exit(-1);
     }
-    else if ((int64_t)a/2 < MININT/2 / (int64_t)b/2){
-      printf("Arithmetic error: * produced an underflow\n");
+    else if (a2 < MININT / b2){
+      printf("Arithmetic error: * produced an underflow");
       exit(-1);
     } 
-    else {}
+    else{}
+    }
+
+  
+    
+  else{
+
+    //if (a2 > 0)
+    //   a2 = a2*-1;
+
+    if (b2 < 0)
+      b2 = b2*-1;
+
+      if (a2 < MAXINT / b2){
+              printf("Arithmetic error: * produced an overflow");
+              exit(-1); 
+      }
+      else if(a2 > MININT / b2){
+        printf("Arithmetic error: * produced an underflow");
+        exit(-1);
+      } 
+      
+    else {}}
   }
 
 }
@@ -110,13 +134,13 @@ void check_non_zero_denominator (VAL d){
   if(*safe_type == '2'){
 
     if ((int64_t)d/2 == 0){
-      printf("Arithmetic error: Division by 0\n");
+      printf("Arithmetic error: Division by 0");
       exit(-1);
     }
-   // return;
+
   }
   else {
-    //return;
+
   }
 }
 //Error codes
@@ -138,7 +162,7 @@ void error(int errCode, VAL val){
     // printf("\n");
   }
   else{
-    printf("Not Boolean or Number, mayor bug in code\n");
+    printf("Not Boolean or Number, mayor bug in code");
   }
   
   exit(errCode);
@@ -147,13 +171,19 @@ void error(int errCode, VAL val){
 
 int main(int argc, char** argv) {
   
-  // printf(" safe type = %s \n",safe_type);
+  char *SAFE = getenv("SAFE");
+  
+  if (SAFE){
+     strcpy(safe_type,SAFE);
+  }
+  
   if(argc > 1){
     strcpy(safe_type,argv[1]);
   }
+
+
   u64 result = our_code_starts_here();
   print_res(result);
-  // printf("choriflay\n");
-  // printf("%" PRId64 "\n", result);
+
   return 0;
 }

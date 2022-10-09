@@ -1,7 +1,7 @@
 NAME: a sub that produces overflow
 DESCRIPTION: breaks with runtime error because it performs a overflow
+PARAMS: SAFE=2
 STATUS: RT error
-PARAMS: -safe=2
 SRC:
 (- 4611686018427387903 -4611686018427387904)
 EXPECTED:

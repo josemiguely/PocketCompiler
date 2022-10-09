@@ -6,9 +6,11 @@
 
 ## Print
 
-Se hace el llamado a funciones externes en el compilador usando en el encabezado del código Assembly la palabra clave `extern`. Aquí se crea una función `print` en **`sys.c`** similar a la función `print_res` creada anteriormente para imprimir el resultado de una compilación, pero con la diferencia de que agrega el carácter ">" cuando es llamada.
+Se hace el llamado a funciones externas en el compilador usando en el encabezado del código Assembly la palabra clave `extern`. Aquí se crea una función `print` en **`sys.c`** similar a la función `print_res` creada anteriormente para imprimir el resultado de una compilación, pero con la diferencia de que agrega el carácter ">" cuando es llamada.
 
 ## Funciones de primer orden
+
+Se decidió por usar la convención de llamado de x64. A continuación, un resumen de su implementación:
 
 Para compilar funciones de primer orden, se generó primero la sintaxis para compilar programas, de tal forma que un programa queda definido como:
 ```ocaml 
@@ -45,6 +47,9 @@ let rec var_count(ex: tag expr) : int
 Esta función permite contar la cantidad de variables locales a utilizar en una expresión, para que así el RSP haga el espacio necesario para alojarlas.
 
 
+### Otras cosas añadidas:
+
+Se implementaron algunas funciones puras para modularizar el código.
 
 ## Objetivos extra
 

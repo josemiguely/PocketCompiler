@@ -1,8 +1,8 @@
 NAME: a mult that produces overflow
 DESCRIPTION: breaks with runtime error because it performs a overflow
+PARAMS: SAFE=2
 STATUS: RT error
-PARAMS: -safe=2
 SRC:
 (* 4611686018427387902 2)
 EXPECTED:
-Arithmetic error: * produced an overflow
+Arithmetic error: \* produced an overflow

@@ -1,7 +1,7 @@
 NAME: a sub that produces underflow
 DESCRIPTION: breaks with runtime error because it performs a underflow
+PARAMS: SAFE=2
 STATUS: RT error
-PARAMS: -safe=2
 SRC:
 (- -4611686018427387904 1)
 EXPECTED:

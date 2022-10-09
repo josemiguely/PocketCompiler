@@ -1,5 +1,6 @@
 NAME: a function that haves a division by 0
 DESCRIPTION: breaks with runtime error because it performs a division my 0
+PARAMS: SAFE=2
 STATUS: RT error
 SRC:
 (

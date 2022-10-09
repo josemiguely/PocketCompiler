@@ -3,4 +3,5 @@ DESCRIPTION: a print inside a logical expression
 SRC:
 (and (print true) false)
 EXPECTED:
-|ORACLE
+> true
+false

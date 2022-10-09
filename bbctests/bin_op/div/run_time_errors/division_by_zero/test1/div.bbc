@@ -1,5 +1,6 @@
 NAME: a division by 0
 DESCRIPTION: breaks with runtime error because the right value is zero
+PARAMS: SAFE=2
 STATUS: RT error
 SRC:
 (/ 1 (- 5 5))

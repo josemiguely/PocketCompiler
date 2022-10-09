@@ -3,4 +3,5 @@ DESCRIPTION: a print of a number
 SRC:
 (print 1)
 EXPECTED:
-|ORACLE
+> 1
+1

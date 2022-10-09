@@ -1,8 +1,8 @@
 NAME: a add that produces underflow
 DESCRIPTION: breaks with runtime error because it performs a underflow
+PARAMS: SAFE=2
 STATUS: RT error
-PARAMS: -safe=2
 SRC:
 (+ -4611686018427387904 -2) 
 EXPECTED:
-Arithmetic error: + produced an underflow
+Arithmetic error: \+ produced an underflow

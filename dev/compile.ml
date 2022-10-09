@@ -2,6 +2,32 @@ open Ast
 open Asm
 open Printf
 
+(* Constants*)
+let const_true = 0xFFFFFFFFFFFFFFFFL (*true value = only 1's*) 
+let const_false = 0x7FFFFFFFFFFFFFFFL (*false value = Most significant bit with 0 and then all 1's*)
+
+let not_mask = 0x8000000000000000L (*Not Mask that only captures most significant bit *)
+
+let min_int = Int64.div Int64.min_int 2L
+let max_int = Int64.div Int64.max_int 2L
+
+let test_number = 0x0000000000000001L (*Number used in some tests instruction*)
+
+
+let save_register_arguments_before_call = 
+[IPush(Reg(R9));IPush(Reg(R8));IPush(Reg(RCX));IPush(Reg(RDX));IPush(Reg(RSI));IPush(Reg(RDI))]
+
+let pop_arguments_after_call = 
+[IPop(Reg(RDI));IPop(Reg(RSI));IPop(Reg(RDX));IPop(Reg(RCX));IPop(Reg(R8));IPop(Reg(R9))]
+
+
+let test_number_instruction = [ITest (Reg(RAX),Const(test_number))] @ [IJnz("error_not_number")]
+
+let test_boolean_instruction = [ITest (Reg(RAX),Const(test_number))] @ [IJz("error_not_boolean")]
+
+let register_arguments = [Reg(RDI);Reg(RSI);Reg(RDX);Reg(RCX);Reg(R8);Reg(R9)]
+
+
 type kind = 
   | ArgKind
   | LocalKind
@@ -116,6 +142,56 @@ let getICqo = [ICqo]
 let getIRet = [IRet]
 
 
+(*Compile_expr pure functions*)
+
+let eNum (n:int64)= 
+    let shifted = (Int64.shift_left n 1) in
+      if n > max_int|| n < min_int then
+        failwith ("Integer overflow: " ^ (Int64.to_string n))
+      else
+        [IMov (Reg(RAX),Const(shifted))]
+
+
+let eBool (truth_value : int64) =
+  [IMov (Reg(RAX),Const(truth_value))]
+
+let eNot () =
+  test_boolean_instruction  
+  @ [IMov (Reg(R10),Const(not_mask))] 
+  @ [IXor (Reg(RAX),Reg(R10))] 
+
+
+let eAdd1Sub1 (instr : string) (number : int64) =
+  test_number_instruction 
+  @ [IPush (Reg(RAX))] (* Push Rax to recover its value after function call*)
+  @ [IPush(Reg(RSI))] @ [IPush(Reg(RDI))] 
+  @ [IMov(Reg(RDI),Reg(RAX))]
+  @ [IMov(Reg(RSI),Const(number))]
+  @ [ICall(sprintf "check_overflow_%s" instr)]
+  @ [IPop (Reg(RDI));IPop (Reg(RSI));IPop(Reg(RAX))]
+  @ [IAdd (Reg(RAX),Const(number))]
+
+let eAdd (slot2 : int) =
+[IAdd (Reg(RAX),RegOffset(RBP,"-",8*slot2))]
+
+let eSub (slot2 : int) =
+  [ISub (Reg(RAX),RegOffset(RBP,"-",8*slot2))] 
+
+let eMult (slot2 : int) =
+  [IMult(Reg(RAX),RegOffset(RBP,"-",8*slot2))
+                  ;ISar(Reg(RAX),Const(1L))]
+
+
+let eDiv (slot2 : int) =
+[IMov (Reg(R10),(RegOffset(RBP,"-",8*slot2)))] 
+               @ [ICqo;IDiv(Reg(R10));IShl(Reg(RAX),Const(1L))]
+
+
+let eLt (slot2 : int) (less_label : string) =
+  [ICmp (Reg(RAX),RegOffset(RBP,"-",8*slot2))] 
+  @ [IMov (Reg(RAX),Const(const_true))] @ [IJl (less_label)] 
+  @ [IMov (Reg(RAX),Const(const_false))] @ [ILabel (less_label)]
+
 let rec lookup name env =
   match env with
   | [] -> failwith (sprintf "Identifier %s is not found in environment" name)
@@ -146,27 +222,7 @@ let add name env kind : (env * int) =
 let add_fun name arity fun_env : (funenv) =
   ((name,arity)::fun_env)
 
-    let save_register_arguments_before_call = 
-      [IPush(Reg(R9));IPush(Reg(R8));IPush(Reg(RCX));IPush(Reg(RDX));IPush(Reg(RSI));IPush(Reg(RDI))]
-
-    let pop_arguments_after_call = 
-      [IPop(Reg(RDI));IPop(Reg(RSI));IPop(Reg(RDX));IPop(Reg(RCX));IPop(Reg(R8));IPop(Reg(R9))]
-    let const_true = 0xFFFFFFFFFFFFFFFFL (*true value = only 1's*) 
-    let const_false = 0x7FFFFFFFFFFFFFFFL (*false value = Most significant bit with 0 and then all 1's*)
-
-    let not_mask = 0x8000000000000000L (*Not Mask that only captures most significant bit *)
-
-    let min_int = Int64.div Int64.min_int 2L
-    let max_int = Int64.div Int64.max_int 2L
     
-    let test_number = 0x0000000000000001L
-
-   let test_number_instruction = [ITest (Reg(RAX),Const(test_number))] @ [IJnz("error_not_number")]
-
-   let test_boolean_instruction = [ITest (Reg(RAX),Const(test_number))] @ [IJz("error_not_boolean")]
-  
-   let register_arguments = [Reg(RDI);Reg(RSI);Reg(RDX);Reg(RCX);Reg(R8);Reg(R9)]
-
    (*Save arguments of actual function / caller before calling a new function*)
    let rec save_arguments_before_call (arg_count : int) (track_count : int) : instruction list  =
    (* print_int track_count;  *)
@@ -185,8 +241,6 @@ let add_fun name arity fun_env : (funenv) =
    else 
     [IPop(List.nth register_arguments (track_count))] @ restore_arguments_after_call arg_count (track_count+1)
     
-    
-
   let call_function_one_argument (funct: string) : instruction list = 
     [IPush(Reg(RDI))] @[IMov(Reg(RDI),Reg(RAX))] @ [ICall(funct)] @ [IPop (Reg(RDI))]
 
@@ -196,39 +250,19 @@ let add_fun name arity fun_env : (funenv) =
   (** Compile AST expressions *)
   let rec compile_expr (e : tag expr) (env : env) (funenv : funenv) (arg_count : int)  : instruction list =
     match e with
-    | Num (n,_) ->
-      let shifted = (Int64.shift_left n 1) in
-      if n > max_int|| n < min_int then
-        failwith ("Integer overflow: " ^ (Int64.to_string n))
-      else
-        [IMov (Reg(RAX),Const(shifted))]
-    | Bool (true,_) ->  [IMov (Reg(RAX),Const(const_true))]
-    | Bool (false,_) ->  [IMov (Reg(RAX),Const(const_false))]
+    | Num (n,_) -> eNum(n)
+    | Bool (true,_) ->  eBool(const_true)
+    | Bool (false,_) ->  eBool(const_false)
     | Prim1 (prim1,expr,_) -> (
       match prim1 with 
       | Not -> (compile_expr expr env funenv arg_count) 
-                @ test_boolean_instruction  
-                @ [IMov (Reg(R10),Const(not_mask))] 
-                @ [IXor (Reg(RAX),Reg(R10))] 
+                @ eNot()
       | Add1 -> (compile_expr expr env funenv arg_count) 
-                @ test_number_instruction 
-                @ [IPush (Reg(RAX))] (* Push Rax to recover its value after function call*)
-                @ [IPush(Reg(RSI))] @ [IPush(Reg(RDI))] 
-                @ [IMov(Reg(RDI),Reg(RAX))]
-                @ [IMov(Reg(RSI),Const(2L))]
-                @ [ICall("check_overflow_add")]
-                @ [IPop (Reg(RDI));IPop (Reg(RSI));IPop(Reg(RAX))]
-                @ [IAdd (Reg(RAX),Const(2L))]
+                @ (eAdd1Sub1 "add" 2L)
 
       | Sub1 -> (compile_expr expr env funenv arg_count) 
-                @ test_number_instruction 
-                @ [IPush (Reg(RAX))] (* Push Rax to recover its value after function call*)
-                @ [IPush(Reg(RSI))] @ [IPush(Reg(RDI))] 
-                @ [IMov(Reg(RDI),Reg(RAX))]
-                @ [IMov(Reg(RSI),Const(-2L))]
-                @ [ICall("check_overflow_sub")]
-                @ [IPop (Reg(RDI));IPop (Reg(RSI));IPop(Reg(RAX))]
-                @ [IAdd (Reg(RAX),Const(-2L))]
+                @ (eAdd1Sub1 "sub" (-2L))
+
       | Print -> (compile_expr expr env funenv arg_count) 
                 @ (call_function_one_argument "print"))
     | Let (x,e,b,_) -> 
@@ -243,8 +277,8 @@ let add_fun name arity fun_env : (funenv) =
     (match kind with
       | LocalKind -> [IMov (Reg(RAX),RegOffset(RBP,"-",8*slot))]
       | ArgKind  ->(
-          if slot<=6 then [IMov (Reg(RAX),List.nth register_arguments (slot-1))] (*RegOffset(RBP,"+",1*slot)*)
-          else [IMov (Reg(RAX),RegOffset(RBP,"+",8*(slot-7+2)))]))(* *)
+          if slot<=6 then [IMov (Reg(RAX),List.nth register_arguments (slot-1))]
+          else [IMov (Reg(RAX),RegOffset(RBP,"+",8*(slot-7+2)))]))
     | If (cond,thn,els,tag) ->
       let else_label = sprintf "false_branch_%d" tag in
       let done_label = sprintf "done_%d" tag in
@@ -263,21 +297,17 @@ let add_fun name arity fun_env : (funenv) =
       let (env'',slot2) = add "der" env' LocalKind in
       let scaffold = (prim2_scaffold expr1 expr2 slot1 slot2 env'' prim2 tag funenv arg_count) in
       match prim2 with
-      | Add ->  scaffold @ [IAdd (Reg(RAX),RegOffset(RBP,"-",8*slot2))]
-      | Sub -> scaffold @ [ISub (Reg(RAX),RegOffset(RBP,"-",8*slot2))] 
+      | Add ->  scaffold @ eAdd(slot2)
+      | Sub -> scaffold @ eSub(slot2)
       | Mult -> scaffold 
-                @ [IMult(Reg(RAX),RegOffset(RBP,"-",8*slot2))
-                ;ISar(Reg(RAX),Const(1L))]
+                @ eMult(slot2)
       | Div -> scaffold 
-               @ [IMov (Reg(R10),(RegOffset(RBP,"-",8*slot2)))] 
-               @ [ICqo;IDiv(Reg(R10));IShl(Reg(RAX),Const(1L))] 
+               @ eDiv(slot2) 
       | And -> scaffold
       | Lt -> 
         let less_label = sprintf "less_%d" tag in
         scaffold 
-        @ [ICmp (Reg(RAX),RegOffset(RBP,"-",8*slot2))] 
-        @ [IMov (Reg(RAX),Const(const_true))] @ [IJl (less_label)] 
-        @ [IMov (Reg(RAX),Const(const_false))] @ [ILabel (less_label)]
+        @ (eLt slot2 less_label)
       | _ -> failwith("Unexpected binary operation") ) 
   | Apply(id,expr_list,_) -> 
     let instr = arg_list_evaluator expr_list env 0 funenv arg_count in (*First we eval Apply arguments*)
@@ -287,13 +317,11 @@ let add_fun name arity fun_env : (funenv) =
     let res = Int64.of_int (max arg_more_than_6_offset 0) in
     save_arguments_before_call arg_count 0 (* save register arguments*)
     @ instr (* Push arguments from 7 to arg_number*)
-    @ [ICall(id)] (* getICall(id) *) 
+    @ [ICall(id)]  
     @ [IAdd(Reg(RSP),Const(res))] 
     @ restore_arguments_after_call arg_count 0
     
-    (* @ pop_arguments_after_call restore the current values of the caller-save argument registers in reverse order from saving them *)
-
-
+    
       
   (** Creates common scaffold for binary operations. For And operation it also includes short-circuit evaluation**)
     and prim2_scaffold (e1: tag expr) (e2 : tag expr) (slot1 : int)(slot2 : int)(env :env)(prim2 : prim2 )(tag:tag) (funenv : funenv) (arg_count : int) : instruction list =
@@ -354,6 +382,7 @@ let add_fun name arity fun_env : (funenv) =
               @ [IPush(Reg(RAX))]
     | [] -> []
 
+    (*Makes binary operation able to call arithmetics errors*)
     and opp_bin 
     (funct : string) (e1: tag expr) (e2 : tag expr) 
     (slot1 : int)(slot2 : int)(env :env)
@@ -373,14 +402,14 @@ let add_fun name arity fun_env : (funenv) =
        @ [IMov (Reg(RAX),RegOffset(RBP,"-",8*slot1))]
    
 
-
-let rec add_list list_variables env kind =
+(*Adds a list of variables to env*)
+let rec add_list (list_variables : string list) (env : env) (kind : kind) =
    match list_variables with
    | h::t -> let (new_env,_) = add h env kind in 
                 add_list t new_env kind
    | [] -> env
 
-
+(* Counts number of local variables in a expression*)
 let rec var_count(ex: tag expr) : int  =
   match ex with 
   | Prim1(_,e,_) -> 1 + var_count e

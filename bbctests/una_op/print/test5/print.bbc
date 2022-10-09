@@ -6,4 +6,5 @@ SRC:
   (f 5)
 )
 EXPECTED:
-|ORACLE
+> 5
+7
