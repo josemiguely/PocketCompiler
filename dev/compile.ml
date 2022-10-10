@@ -171,6 +171,20 @@ let eAdd1Sub1 (instr : string) (number : int64) =
   @ [IPop (Reg(RDI));IPop (Reg(RSI));IPop(Reg(RAX))]
   @ [IAdd (Reg(RAX),Const(number))]
 
+  (* (compile_expr e1 env funenv arg_count)
+  @ test_number_instruction
+  @ [IMov (RegOffset(RBP,"-",8*slot1),Reg(RAX))]
+  @ (compile_expr e2 env funenv arg_count)
+  @ test_number_instruction
+  @ [IMov (RegOffset(RBP,"-",8*slot2),Reg(RAX))]
+  @ [IPush(Reg(RSI))] @ [IPush(Reg(RDI))] 
+  @ [IMov(Reg(RDI),RegOffset(RBP,"-",8*slot1))]
+  @ [IMov(Reg(RSI),RegOffset(RBP,"-",8*slot2))]
+  @ [ICall(funct)]
+  @ [IPop (Reg(RDI));IPop (Reg(RSI))]
+  @ [IMov (Reg(RAX),RegOffset(RBP,"-",8*slot1))] *)
+
+
 let eAdd (slot2 : int) =
 [IAdd (Reg(RAX),RegOffset(RBP,"-",8*slot2))]
 

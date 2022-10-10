@@ -68,8 +68,10 @@ void check_overflow_add (VAL a, VAL b){
 
 void check_overflow_sub (VAL a, VAL b){
 
+  // printf("a = %ld\n",(int64_t)a/2);
+  // printf("b = %ld\n",(int64_t)b/2);
   if(*safe_type == '2'){
-
+  // printf("safe type");
     
     if ((int64_t)a/2 > MAXINT + (int64_t)b/2){
       printf("Arithmetic error: - produced an overflow");
@@ -89,7 +91,7 @@ void check_overflow_mul (VAL a, VAL b){
   int64_t a2 = ((int64_t)a)/2;
   int64_t b2 = ((int64_t)b)/2;
 
-  if(*safe_type == '2' && b2 !=0 ){
+  if(*safe_type == '2' && b2 !=0 && a2!=0 ){
 
     if (a2 < 0 && b2 < 0 || a2 > 0 && b2 > 0){
 
@@ -112,8 +114,9 @@ void check_overflow_mul (VAL a, VAL b){
     //if (a2 > 0)
     //   a2 = a2*-1;
 
-    if (b2 < 0)
+    if (b2 < 0){
       b2 = b2*-1;
+    }
 
       if (a2 < MAXINT / b2){
               printf("Arithmetic error: * produced an overflow");

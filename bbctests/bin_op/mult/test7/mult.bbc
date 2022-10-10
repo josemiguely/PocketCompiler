@@ -1,6 +1,6 @@
 NAME: a mult that returns 0
 DESCRIPTION: a mult that returns 0
 SRC:
-(* 0 0)
+(* 0 10)
 EXPECTED:
 |ORACLE

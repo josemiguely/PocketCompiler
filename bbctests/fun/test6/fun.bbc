@@ -2,9 +2,9 @@ NAME:  a fun with 3 declaration, more than 6 args and checking use of arguments 
 DESCRIPTION: a fun with 3 declarations and more than 6 args and use of arguments after call
 SRC:
 (
-  (def (otherfun q w e r t y u i o p a s d) (- (- (- (* (- (+ (* (- (+ (* (- (+ q w) e) r) t) y) u) i) o) p) a) s) d))
-  (def (f a s d f g h j k l z x c) (- (* (- (+ (+ (+ (+ (- (+ (* (/ (+ a s) d) f) g) h) j) k) (otherfun -1 -2 -3 -4 -5 -6 -7 -8 -9 -10 -11 -52 -53)) l) z) x) c))
-  (def (g q w e r t y u n) (+ (/ (- (+ (* (/ (+ (+ (- (+ (+ (* (- (* (+ (- (+ (otherfun 10 2 3 4 5 6 7 8 9 10 11 12 -13) q) w) e) r) t) y) u) n) (f -21 -22 -23 -24 -25 -26 -27 -28 -29 -30 -31 -32)) q) w) e) r) t) y) u) n))
+  (def (otherfun q w e r t y u i o p a s d) (- (- (/ (+ (- (+ (+ (- (+ (+ (- (+ q w) e) r) t) y) u) i) o) p) a) s) d))
+  (def (f a s d f g h j k l z x c) (- (+ (- (+ (+ (* (- (- (+ (+ (/ (+ a s) d) f) g) h) j) k) (otherfun -1 -2 -3 -4 -5 -6 -7 -8 -9 -10 -11 -52 -53)) l) z) x) c))
+  (def (g q w e r t y u n) (* (/ (- (* (+ (+ (+ (+ (- (+ (+ (+ (- (/ (+ (- (- (otherfun 10 2 3 4 5 6 7 8 9 10 11 12 -13) q) w) e) r) t) y) u) n) (f -21 -22 -23 -24 -25 -26 -27 -28 -29 -30 -31 -32)) q) w) e) r) t) y) u) n))
   (g 1 2 3 4 5 6 7 8)
 )
 EXPECTED:

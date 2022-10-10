@@ -5,4 +5,4 @@ STATUS: RT error
 SRC:
 (sub1 -4611686018427387904)
 EXPECTED:
-Arithmetic error: \- produced an overflow
+Arithmetic error: \- produced an underflow
