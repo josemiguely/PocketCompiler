@@ -166,24 +166,10 @@ let eAdd1Sub1 (instr : string) (number : int64) =
   @ [IPush (Reg(RAX))] (* Push Rax to recover its value after function call*)
   @ [IPush(Reg(RSI))] @ [IPush(Reg(RDI))] 
   @ [IMov(Reg(RDI),Reg(RAX))]
-  @ [IMov(Reg(RSI),Const(number))]
+  @ [IMov(Reg(RSI),Const(2L))]
   @ [ICall(sprintf "check_overflow_%s" instr)]
   @ [IPop (Reg(RDI));IPop (Reg(RSI));IPop(Reg(RAX))]
   @ [IAdd (Reg(RAX),Const(number))]
-
-  (* (compile_expr e1 env funenv arg_count)
-  @ test_number_instruction
-  @ [IMov (RegOffset(RBP,"-",8*slot1),Reg(RAX))]
-  @ (compile_expr e2 env funenv arg_count)
-  @ test_number_instruction
-  @ [IMov (RegOffset(RBP,"-",8*slot2),Reg(RAX))]
-  @ [IPush(Reg(RSI))] @ [IPush(Reg(RDI))] 
-  @ [IMov(Reg(RDI),RegOffset(RBP,"-",8*slot1))]
-  @ [IMov(Reg(RSI),RegOffset(RBP,"-",8*slot2))]
-  @ [ICall(funct)]
-  @ [IPop (Reg(RDI));IPop (Reg(RSI))]
-  @ [IMov (Reg(RAX),RegOffset(RBP,"-",8*slot1))] *)
-
 
 let eAdd (slot2 : int) =
 [IAdd (Reg(RAX),RegOffset(RBP,"-",8*slot2))]
@@ -274,8 +260,8 @@ let add_fun name arity fun_env : (funenv) =
       | Add1 -> (compile_expr expr env funenv arg_count) 
                 @ (eAdd1Sub1 "add" 2L)
 
-      | Sub1 -> (compile_expr expr env funenv arg_count) 
-                @ (eAdd1Sub1 "sub" (-2L))
+      | Sub1 -> (compile_expr expr env funenv arg_count)    
+               @ (eAdd1Sub1 "sub" (-2L))
 
       | Print -> (compile_expr expr env funenv arg_count) 
                 @ (call_function_one_argument "print"))
