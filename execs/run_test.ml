@@ -208,22 +208,217 @@ let test_interp_compound () =
     (interp (Prim2 (Add, Prim2 (Add, Num 3L, (Prim1 (Sub1, Num 6L))), Num 12L)) empty_env empty_fenv)
     (NumV 20L)
 
+let lazy_and () =
+  check value "reduces to false without throwing an error or printing"
+  (interp (parse_exp (sexp_from_string "(and false (print -1))")) empty_env empty_fenv)
+  (BoolV false)
+
+let error_if_cond_not_bool () =
+  let v = (fun () -> ignore @@ interp (parse_exp (sexp_from_string "(if 23 true false)")) empty_env empty_fenv) in 
+  check_raises "if received a non-boolean as condition" 
+  (RTError "Type error: Expected boolean but got 23") v
 
 let test_error_III () =
   let v = (fun () -> ignore @@ interp (Prim2 (Add, Bool true,  Num (-1L))) empty_env empty_fenv) in 
   check_raises "incorrect addition" 
-  (RTError "Expected two integers, but got true and -1") v
+  (RTError "Type error: Expected integer but got true") v
 
 
 let test_error_BBB () =
   let v = (fun () -> ignore @@ (interp (Prim2 (And, Num 5L, Bool false))) empty_env empty_fenv) in 
   check_raises "incorrect conjunction"
-  (RTError "Expected two booleans, but got 5 and false") v
+  (RTError "Type error: Expected boolean but got 5") v
 
 let test_error_IIB () =
   let v = (fun () -> ignore @@ (interp (Prim2 (Lte, Bool true, Num 10L))) empty_env empty_fenv) in 
   check_raises  "incorrect lesser comparison" 
-  (RTError "Expected two integers, but got true and 10") v
+  (RTError "Type error: Expected integer but got true") v
+
+(* When there is more than one operand with the wrong type, report the first one. *)
+let test_type_error_mult_illtyped () =
+  let v = (fun () -> ignore @@ (interp (Prim2 (Add, Bool true, Bool false))) empty_env empty_fenv) in 
+  check_raises  "should report first ill-typed argument" 
+  (RTError "Type error: Expected integer but got true") v
+
+(* Arity mismatch and undefined function errors *)
+(*  All these tests use the same function definitions, but with different expressions in <body>
+      ( 
+        (def (g x) (if (<= x 5) 5 x))
+        (def (f x y) (+ (+ 2 x) (g y)))
+        <body>
+      )
+    When,
+      <body> := (f 8)      =>  "Arity mismatch: f expected 2 arguments but got 1"
+      <body> := (g 4 5 6)  =>  "Arity mismatch: g expected 1 arguments but got 3"
+      <body> := (h 1)      =>  "Undefined function: h"
+*)
+let test_error_arity_less_args () =
+  let v = (fun () -> ignore @@
+                    (interp_prog (parse_prog (sexp_from_string "( 
+                      (def (g x) (if (<= x 5) 5 x))
+                      (def (f x y) (+ (+ 2 x) (g y)))
+                      (f 8))")))
+                    empty_env) in 
+  check_raises  "should report arity mismatch (1 arg instead of 2)" 
+  (CTError "Arity mismatch: f expected 2 arguments but got 1") v
+
+let test_error_arity_more_args () =
+  let v = (fun () -> ignore @@
+                    (interp_prog (parse_prog (sexp_from_string "( 
+                      (def (g x) (if (<= x 5) 5 x))
+                      (def (f x y) (+ (+ 2 x) (g y)))
+                      (g 4 5 6))")))
+                    empty_env) in 
+  check_raises  "should report arity mismatch (3 args instead of 1)" 
+  (CTError "Arity mismatch: g expected 1 arguments but got 3") v
+
+let test_error_undef_h () =
+  let v = (fun () -> ignore @@
+                    (interp_prog (parse_prog (sexp_from_string "( 
+                      (def (g x) (if (<= x 5) 5 x))
+                      (def (f x y) (+ (+ 2 x) (g y)))
+                      (h 1))")))
+                    empty_env) in 
+  check_raises  "should report undefined fun `h`" 
+  (CTError "Undefined function: h") v
+
+(* Foreign functions: Type errors and arity mismatches *)
+(*  All these tests use the same FF declarations, but with different expressions in <body>
+      ( 
+        (defsys print any -> any)
+        (defsys max int int -> int)
+        (defsys xor bool bool -> bool)
+        <body>
+      )
+    When,
+      <body> := (max 5)          =>  "Arity mismatch: max expected 2 arguments but got 1"
+      <body> := (print 8 false)  =>  "Arity mismatch: print expected 1 arguments but got 2"
+      <body> := (xor true 23)    =>  "Type error: Expected boolean but got 23"
+      <body> := (xor -35 23)     =>  "Type error: Expected boolean but got -35"
+      <body> := (pow 3 4)        =>  "Undefined function: pow"
+*)
+let test_ffi_error_arity_less_args () =
+  let v = (fun () -> ignore @@
+                    (interp_prog (parse_prog (sexp_from_string "( 
+                      (defsys print any -> any)
+                      (defsys max int int -> int)
+                      (defsys xor bool bool -> bool)
+                      (max 5))")))
+                    empty_env) in 
+  check_raises  "should report arity mismatch (1 arg instead of 2)" 
+  (CTError "Arity mismatch: max expected 2 arguments but got 1") v
+
+let test_ffi_error_arity_more_args () =
+  let v = (fun () -> ignore @@
+                    (interp_prog (parse_prog (sexp_from_string "( 
+                      (defsys print any -> any)
+                      (defsys max int int -> int)
+                      (defsys xor bool bool -> bool)
+                      (print 8 false))")))
+                    empty_env) in 
+  check_raises  "should report arity mismatch (2 args instead of 1)" 
+  (CTError "Arity mismatch: print expected 1 arguments but got 2") v
+
+let test_ffi_type_error () =
+  let v = (fun () -> ignore @@
+                    (interp_prog (parse_prog (sexp_from_string "( 
+                      (defsys print any -> any)
+                      (defsys max int int -> int)
+                      (defsys xor bool bool -> bool)
+                      (xor true 23))")))
+                    empty_env) in 
+  check_raises  "should report type error" 
+  (RTError "Type error: Expected boolean but got 23") v
+
+let test_ffi_error_multi_ill_typed () =
+  let v = (fun () -> ignore @@
+                    (interp_prog (parse_prog (sexp_from_string "( 
+                      (defsys print any -> any)
+                      (defsys max int int -> int)
+                      (defsys xor bool bool -> bool)
+                      (xor -35 23))")))
+                    empty_env) in 
+  check_raises  "should report the first ill-typed value" 
+  (RTError "Type error: Expected boolean but got -35") v
+
+let test_ffi_error_undef_pow () =
+  let v = (fun () -> ignore @@
+                    (interp_prog (parse_prog (sexp_from_string "( 
+                      (defsys print any -> any)
+                      (defsys max int int -> int)
+                      (defsys xor bool bool -> bool)
+                      (pow 3 4))")))
+                    empty_env) in 
+  check_raises  "should report that `pow` is undefined" 
+  (CTError "Undefined function: pow") v
+
+(* Tuple errors: type errors produced by ill-typed arguments to [get] and [set],
+   and index-out-of-bounds errors. *)
+
+let test_get_error_ill_typed_tuple () =
+  let v = (fun () -> ignore @@
+                    (interp_prog (parse_prog (sexp_from_string "( 
+                      (get false 12))")))
+                    empty_env) in 
+  check_raises  "should report that first argument is not a tuple" 
+  (RTError "Type error: Expected tuple but got false") v
+
+let test_get_error_ill_typed_index () =
+  let v = (fun () -> ignore @@
+                    (interp_prog (parse_prog (sexp_from_string "( 
+                      (get (tup 2 true) (tup)))")))
+                    empty_env) in 
+  check_raises  "should report that second argument is not an integer" 
+  (RTError "Type error: Expected integer but got (tup)") v
+
+let test_get_error_multi_ill_typed () =
+  let v = (fun () -> ignore @@
+                    (interp_prog (parse_prog (sexp_from_string "( 
+                      (get -34 true))")))
+                    empty_env) in 
+  check_raises  "should report the first ill-typed argument" 
+  (RTError "Type error: Expected tuple but got -34") v
+
+let test_get_index_out_of_bounds () =
+  let v = (fun () -> ignore @@
+                    (interp_prog (parse_prog (sexp_from_string "( 
+                      (get (tup 2 true (tup)) -4))")))
+                    empty_env) in 
+  check_raises  "should report index -4 out of bounds" 
+  (RTError "Index out of bounds: Tried to access index -4 of (tup 2 true (tup))") v
+
+
+let test_set_error_ill_typed_tuple () =
+  let v = (fun () -> ignore @@
+                    (interp_prog (parse_prog (sexp_from_string "( 
+                      (set false 12 true))")))
+                    empty_env) in 
+  check_raises  "should report that first argument is not a tuple" 
+  (RTError "Type error: Expected tuple but got false") v
+
+let test_set_error_ill_typed_index () =
+  let v = (fun () -> ignore @@
+                    (interp_prog (parse_prog (sexp_from_string "( 
+                      (set (tup 2 true) (tup) -23))")))
+                    empty_env) in 
+  check_raises  "should report that second argument is not an integer" 
+  (RTError "Type error: Expected integer but got (tup)") v
+
+let test_set_error_multi_ill_typed () =
+  let v = (fun () -> ignore @@
+                    (interp_prog (parse_prog (sexp_from_string "( 
+                      (set -34 true (tup)))")))
+                    empty_env) in 
+  check_raises  "should report the first ill-typed argument" 
+  (RTError "Type error: Expected tuple but got -34") v
+
+let test_set_index_out_of_bounds () =
+  let v = (fun () -> ignore @@
+                    (interp_prog (parse_prog (sexp_from_string "( 
+                      (set (tup 2 true (tup)) 3 true))")))
+                    empty_env) in 
+  check_raises  "should report index 3 out of bounds" 
+  (RTError "Index out of bounds: Tried to access index 3 of (tup 2 true (tup))") v
 
 (* OCaml tests: extend with your own tests *)
 let ocaml_tests = [
@@ -264,13 +459,34 @@ let ocaml_tests = [
     test_case "A complex application" `Slow test_interp_fo_app_2 ;
     test_case "A compound expression" `Quick test_interp_compound;
     test_case "A get expression" `Slow test_interp_get ;
-    test_case "A set expression" `Slow test_interp_set 
+    test_case "A set expression" `Slow test_interp_set ;
+    test_case "`and` is lazy" `Quick lazy_and
   ] ;
   "errors", [
-      test_case "Addition of true" `Quick test_error_III ;
+    test_case "Addition of true" `Quick test_error_III ;
     test_case "And of 5" `Quick test_error_BBB ;
-    test_case "Lesser than true" `Quick test_error_IIB
+    test_case "If received non-boolean condition" `Quick error_if_cond_not_bool ;
+    test_case "Lesser than true" `Quick test_error_IIB ;
+    test_case "Report first ill-typed argument" `Quick test_type_error_mult_illtyped ;
+    test_case "Arity mismatch: less args" `Quick test_error_arity_less_args ;
+    test_case "Arity mismatch: more args" `Quick test_error_arity_more_args ;
+    test_case "Undefined function `h`" `Quick test_error_undef_h ;
 
+    test_case "FF Arity mismatch: `max` received less args" `Quick test_ffi_error_arity_less_args ;
+    test_case "FF Arity mismatch: `print` received more args" `Quick test_ffi_error_arity_more_args ;
+    test_case "FF Type error: apply `xor` to 23 " `Quick test_ffi_type_error ;
+    test_case "FF Report first ill-typed arg to `xor`" `Quick test_ffi_error_multi_ill_typed ;
+    test_case "FF Undefined: `pow`" `Quick test_ffi_error_undef_pow ;
+
+    test_case "Tuple Get: Ill-typed tuple" `Quick test_get_error_ill_typed_tuple ;
+    test_case "Tuple Get: Ill-typed index" `Quick test_get_error_ill_typed_index ;
+    test_case "Tuple Get: Multiple ill-typed arguments" `Quick test_get_error_multi_ill_typed;
+    test_case "Tuple Get: Index out of bounds" `Quick test_get_index_out_of_bounds ;
+
+    test_case "Tuple Set: Ill-typed tuple" `Quick test_set_error_ill_typed_tuple ;
+    test_case "Tuple Set: Ill-typed index" `Quick test_set_error_ill_typed_index ;
+    test_case "Tuple Set: Multiple ill-typed arguments" `Quick test_set_error_multi_ill_typed;
+    test_case "Tuple Set: Index out of bounds" `Quick test_set_index_out_of_bounds ;
 
   ]
 ]     
