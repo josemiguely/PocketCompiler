@@ -3,7 +3,7 @@ open Printf
 
 (* primitive operators *)
 type prim1 = Add1 | Sub1 | Not | Print
-type prim2 = Add | And | Lte | Lt | Mult | Div | Sub
+type prim2 = Add | And | Lte | Lt | Mult | Div | Sub | Get
 
 
 type tag = int
@@ -18,12 +18,20 @@ type 'a expr =
   | Let of string * 'a expr * 'a expr * 'a
   | If of 'a expr * 'a expr * 'a expr * 'a
   | Apply of string * 'a expr list * 'a
+  | Tuple of 'a expr list * 'a
+  | Set of 'a expr  * 'a expr  * 'a expr * 'a
+  
+
+
+
+
 
 (* C function argument types *)
 type ctype =
   | CAny
   | CInt
   | CBool
+  | CTuple of ctype list
 
 (* Function definitions *)
 type fundef =
@@ -61,9 +69,17 @@ let tag (e : 'a expr) : tag expr =
       let (tag_tbranch,next_tag_2) = help tbranch (next_tag_1) in
       let (tag_fbranch,next_tag_3) = help fbranch (next_tag_2) in
       (If (tag_cond,tag_tbranch,tag_fbranch,cur),next_tag_3)
+    | Set (variable,pos,replace,_) -> (
+      let (variable,next_tag) = help variable (cur +1) in 
+      let (tag_pos,next_tag2) = help pos (next_tag) in 
+      let (tag_replace,next_tag3) = help replace (next_tag2) in
+      (Set (variable,tag_pos,tag_replace,cur),next_tag3))
+    | Tuple (list_expr,_) -> (
+      let (tag_list_exp, next_tag) = (tag_list list_expr (cur+1)) in 
+      (Tuple (tag_list_exp,cur),next_tag) 
+    )
     | Apply (name, e, _) -> (
       let (tag_list_expr,next_tag)= (tag_list e (cur+1)) in
-      
       (Apply (name, tag_list_expr ,cur), next_tag))
       (*
       let (tag_e, next_tag) = 
@@ -108,22 +124,34 @@ let rec string_of_expr(e : tag expr) : string =
     | Lt -> "<"
     | Sub -> "-"
     | Div -> "/"
-    | Mult -> "*") (string_of_expr e1) (string_of_expr e2)
+    | Mult -> "*"
+    | Get -> "get") (string_of_expr e1) (string_of_expr e2)
   | Let (x, e1, e2,_) -> sprintf "(let (%s %s) %s)" x (string_of_expr e1) (string_of_expr e2) 
   | If (e1, e2, e3,_) -> sprintf "(if %s %s %s)" (string_of_expr e1) (string_of_expr e2) (string_of_expr e3)
-    
-
   | Apply (fe, ael,_) -> sprintf "(%s %s)" fe (String.concat " " (List.map string_of_expr ael))
+  | Tuple (exprs,_) -> sprintf "(tup %s)" (string_of_exprs exprs) 
+  | Set (e, k, v,_) -> sprintf "(set %s %s %s)" (string_of_expr e) (string_of_expr k) (string_of_expr v) 
+  and string_of_exprs (e: 'a expr list) : string = 
+      match e with
+      | [] -> ""
+      | h :: t -> " " ^ (string_of_expr h) ^ (string_of_exprs t) 
 
 
 (** functions below are not used, would be used if testing the parser on defs **)
 
 (* Pretty printing C types - used by testing framework *)
-let string_of_ctype(t : ctype) : string =
+let rec string_of_ctype(t : ctype) : string =
 match t with
 | CAny -> "any"
 | CInt -> "int"
 | CBool -> "bool"
+| CTuple types -> 
+        let rec string_of_types =
+            fun ls -> (match ls with
+            | [] -> ""
+            | e::l -> e ^ "," ^ string_of_types l) in
+        "("^string_of_types (List.map string_of_ctype types)^")"
+
 
 (* Pretty printing function definitions - used by testing framework *)
 let string_of_fundef(d : fundef) : string =

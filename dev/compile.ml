@@ -320,6 +320,11 @@ let add_fun name arity fun_env : (funenv) =
     @ [ICall(id)]  
     @ [IAdd(Reg(RSP),Const(res))] 
     @ restore_arguments_after_call arg_count 0
+
+  | Set (_,_,_,_) -> (failwith("tonta"))
+  | Tuple(_,_) ->
+    (failwith ("tonto"))
+  
     
     
       
