@@ -175,7 +175,11 @@ void error(int errCode, VAL val){
 int main(int argc, char** argv) {
   
   char *SAFE = getenv("SAFE");
+
+  uint64_t* HEAP = calloc(1024, sizeof(uint64_t)); // Allocate 8KB of memory for now
+  //print(result);
   
+ 
   if (SAFE){
      strcpy(safe_type,SAFE);
   }
@@ -185,8 +189,8 @@ int main(int argc, char** argv) {
   }
 
 
-  u64 result = our_code_starts_here();
+  u64 result = our_code_starts_here(HEAP);
   print_res(result);
-
+  free(HEAP);
   return 0;
 }

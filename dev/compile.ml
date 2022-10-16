@@ -53,6 +53,10 @@ let getRDX = RDX
 
 let getRCX = RCX
 
+let getR15 = R15
+
+let getR11 = R11
+
 
 (*Pure functions for arguments*)
 
@@ -62,8 +66,8 @@ let getConst ( num:int64 ) =
 let getReg ( reg1:reg ) =
 Reg(reg1)
 
-let getRegOffset (reg1:reg) (op : string) (offset: int) =
-RegOffset(reg1,op,offset)
+let getRegOffset (reg:reg) (op : string) (offset: int) =
+RegOffset(reg,op,offset)
 
 (*Pure functions for instructions*)
 
@@ -191,6 +195,11 @@ let eLt (slot2 : int) (less_label : string) =
   [ICmp (Reg(RAX),RegOffset(RBP,"-",8*slot2))] 
   @ [IMov (Reg(RAX),Const(const_true))] @ [IJl (less_label)] 
   @ [IMov (Reg(RAX),Const(const_false))] @ [ILabel (less_label)]
+
+
+
+  
+
 
 let rec lookup name env =
   match env with
@@ -322,8 +331,32 @@ let add_fun name arity fun_env : (funenv) =
     @ restore_arguments_after_call arg_count 0
 
   | Set (_,_,_,_) -> (failwith("tonta"))
-  | Tuple(_,_) ->
-    (failwith ("tonto"))
+  | Tuple(expr_list,_) -> 
+    (*Nmero de expresiones en la tupla*)
+    let tuples = (List.length expr_list) in
+    let expr_number = Int64.of_int tuples in
+    (*Colocamos el size de la tupla*)
+    (getIMov (getReg getR10) (getConst expr_number)) (* IMov(Reg(R10),Reg(Const(expr_number))  )  *)
+    (*Evaluar cada elemento de la lista*)
+     @ match expr_list with
+      | h::t -> (getIMov (getRegOffset getR15 "+" 1) (getReg (compile_expr h env funenv arg_count))) 
+      | [] -> getIMov (getReg getRAX) (getReg getR15) @
+              getIAdd (getReg getRAX) (getConst 1L) @ (*tag de la tupla*)
+              getIAdd (getReg getR15) (getConst (Int64.of_int (8*(tuples+1)))) (*n elementos = expr_numner*)
+   
+
+
+
+    (* mov [R15 + 8*0], size
+      mov [R15 + 8*1], 1er vbalor
+      ...
+      mov [R15 + 8 * n], <last part of tuple>
+      mov RAX, R15           ;; Start creating the tuple value itself
+      add RAX, 0x1           ;; tag the tuple
+      add R15, 8 * (n + 1)   ;; bump the heap pointer
+
+      
+      *)
   
     
     
@@ -386,6 +419,8 @@ let add_fun name arity fun_env : (funenv) =
               @ compile_expr h env funenv arg_count 
               @ [IPush(Reg(RAX))]
     | [] -> []
+
+    
 
     (*Makes binary operation able to call arithmetics errors*)
     and opp_bin 
@@ -451,42 +486,66 @@ let rec compile_list_fundef (f_list:fundef list) (fun_env : funenv) : (string * 
     ("\n"^ head ^ rest,final_fenv)
   | [] -> ("",fun_env) 
 
+let extern_list = 
+  ["error";"print";"check_overflow_add";"check_overflow_sub";"check_overflow_mul";"check_non_zero_denominator"]
+
+
+
+let rec extern_functions (s:string list): string =
+  match s with 
+  | [] -> ""
+  | h::t -> (sprintf "extern %s\n" h) ^ (extern_functions t)
+
+
+let error_functions ="
+error_not_number:
+  mov RSI,RAX
+  mov RDI,0x1
+  call error
+  
+error_not_boolean:
+  mov RSI,RAX
+  mov RDI,0x2
+  call error
+"
+
+let prologue ="  mov RSP, RBP
+  pop RBP
+"
+
+
+  (* "mov R15, RDI
+   add R15, 7
+   mov R11, 0xfffffffffffffff8L
+   and R15, R11
+  " *)
+  
+(*Heap initializer ensures that provided address is multiple of 8*)
+let heap_initializer =
+  asm_to_string ((getIMov (getReg getR11) (getReg getRDI)) @ 
+  (getIMov (getReg getR11) (getConst  0xfffffffffffffff8L)) @ 
+  (getIAnd (getReg getR15) (getReg getR11)))
+  
+
+let prelude(vars: int): string =
+  sprintf "section .text
+global our_code_starts_here\n" ^ 
+(extern_functions extern_list) ^
+sprintf "
+our_code_starts_here:
+  push RBP
+  mov RBP, RSP
+  sub RSP, 0x%x\n" vars
+  
 (*Compiles whole program*)
 let compile_prog (p:prog)  : string =
   let flist, e = p in
   let (functions,funenv) = compile_list_fundef flist [] in
   let instrs = compile_expr (tag e) [] funenv 0 in
-  let count_of_var = 16* 16 * (var_count e) in
-  let prelude =sprintf "section .text
-global our_code_starts_here
-extern error
-extern print
-extern check_overflow_add
-extern check_overflow_sub
-extern check_overflow_mul
-extern check_non_zero_denominator
-our_code_starts_here:
-push RBP
-mov RBP, RSP
-sub RSP, 0x%x\n" count_of_var in
+  let vars = 16* 16 * (var_count e) in
 
-let prologue ="mov RSP, RBP
-pop RBP
-" in
-
-let error_functions ="
-error_not_number:
-mov RSI,RAX
-mov RDI,0x1
-call error
-
-error_not_boolean:
-mov RSI,RAX
-mov RDI,0x2
-call error
-" in
-prelude ^  asm_to_string (instrs) ^ prologue ^ asm_to_string([IRet]) ^  functions ^ error_functions
-
+  (prelude vars) ^ heap_initializer ^ asm_to_string (instrs) ^ 
+   prologue ^ asm_to_string([IRet]) ^ functions ^ error_functions
 
 
 
