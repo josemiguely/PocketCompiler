@@ -1,0 +1,37 @@
+dune exec execs/run_compile.exe examples/progtuple.src
+section .text                       
+global our_code_starts_here
+extern error
+extern print
+extern check_overflow_add
+extern check_overflow_sub
+extern check_overflow_mul
+extern check_non_zero_denominator
+
+our_code_starts_here:
+  push RBP
+  mov RBP, RSP
+  sub RSP, 0x100
+  mov R15, RDI
+  add R15, 0x7
+  mov R11, 0xfffffffffffffff8
+  and R15, R11
+  mov [R15 + 0], 0x1
+  mov RAX, 0x4
+  mov [R15 + 1], RAX
+  mov RAX, R15
+  add RAX, 0x1
+  add R15, 0x10
+  mov RSP, RBP
+  pop RBP
+  ret
+
+error_not_number:
+  mov RSI,RAX
+  mov RDI,0x1
+  call error
+  
+error_not_boolean:
+  mov RSI,RAX
+  mov RDI,0x2
+  call error

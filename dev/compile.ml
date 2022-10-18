@@ -60,21 +60,28 @@ let getR11 = R11
 
 (*Pure functions for arguments*)
 
-let getConst ( num:int64 ) =
+let getConst ( num:int64 ) : arg =
+(***Recieves num of type int64 and returns Const(num) of type arg*)
   Const(num)
 
-let getReg ( reg1:reg ) =
-Reg(reg1)
+let getReg ( reg1:reg ) : arg =
+(**Recieves reg1 of type reg. Returns [Reg(reg1)] of type arg*)
+  Reg(reg1)
 
-let getRegOffset (reg:reg) (op : string) (offset: int) =
-RegOffset(reg,op,offset)
+
+let getRegOffset (reg:reg) (op : string) (offset: int) : arg =
+(** Recieves a register that with a operation will offset an amount. Returns [[RegOffset(reg,op,offset)]]*)
+  RegOffset(reg,op,offset)
 
 (*Pure functions for instructions*)
 
-let getIMov (arg1 : arg) (arg2: arg) =
+
+let getIMov (arg1 : arg) (arg2: arg) : instruction list =
+(**Moves second arg to first arg. Returns [[IMov (arg1,arg2)]]*)
   [IMov(arg1,arg2)]
 
 let getIAdd (arg1 : arg) (arg2 : arg) =
+(**Add first arg with second arg. Returns [[IAdd (arg1,arg2)]]*)
   [IAdd (arg1,arg2)]
 
 let getISub (arg1 : arg) (arg2 : arg) =
@@ -333,16 +340,18 @@ let add_fun name arity fun_env : (funenv) =
   | Set (_,_,_,_) -> (failwith("tonta"))
   | Tuple(expr_list,_) -> 
     (*Nmero de expresiones en la tupla*)
-    let tuples = (List.length expr_list) in
-    let expr_number = Int64.of_int tuples in
+    let expr_count = (List.length expr_list) in
+    let accum = 1 in
+    (getIMov (getReg(getR10)) (getConst (Int64.of_int expr_count))) @ (getIMov (getRegOffset getR15 "+" 0) (getReg getR10)) @
+    (eTuple expr_list expr_count accum env funenv arg_count)
     (*Colocamos el size de la tupla*)
-    (getIMov (getReg getR10) (getConst expr_number)) (* IMov(Reg(R10),Reg(Const(expr_number))  )  *)
+    (* (getIMov (getReg getR10) (getConst expr_number)) IMov(Reg(R10),Reg(Const(expr_number))  )  *)
     (*Evaluar cada elemento de la lista*)
-     @ match expr_list with
+     (* @ match expr_list with
       | h::t -> (getIMov (getRegOffset getR15 "+" 1) (getReg (compile_expr h env funenv arg_count))) 
       | [] -> getIMov (getReg getRAX) (getReg getR15) @
               getIAdd (getReg getRAX) (getConst 1L) @ (*tag de la tupla*)
-              getIAdd (getReg getR15) (getConst (Int64.of_int (8*(tuples+1)))) (*n elementos = expr_numner*)
+              getIAdd (getReg getR15) (getConst (Int64.of_int (8*(tuples+1)))) n elementos = expr_numner *)
    
 
 
@@ -441,6 +450,14 @@ let add_fun name arity fun_env : (funenv) =
        @ [IPop (Reg(RDI));IPop (Reg(RSI))]
        @ [IMov (Reg(RAX),RegOffset(RBP,"-",8*slot1))]
    
+    
+    and eTuple (expr_list: tag expr list) (expr_count : int) (accum : int) (env : env) (funenv : funenv) (arg_count : int) =
+        match expr_list with
+          | h::t -> (compile_expr h env funenv arg_count) @ (getIMov (getRegOffset getR15 "+" (accum*8)) (getReg getRAX)  ) @ (eTuple t expr_count (accum+1) env funenv arg_count)
+          | [] -> getIMov (getReg getRAX) (getReg getR15) @
+                  getIAdd (getReg getRAX) (getConst 1L) @ (*Se taggea la tupla*)
+                  getIAdd (getReg getR15) (getConst (Int64.of_int (8*(expr_count+1)))) (*Bump del header pointer*)
+        
 
 (*Adds a list of variables to env*)
 let rec add_list (list_variables : string list) (env : env) (kind : kind) =
@@ -490,7 +507,6 @@ let extern_list =
   ["error";"print";"check_overflow_add";"check_overflow_sub";"check_overflow_mul";"check_non_zero_denominator"]
 
 
-
 let rec extern_functions (s:string list): string =
   match s with 
   | [] -> ""
@@ -522,7 +538,8 @@ let prologue ="  mov RSP, RBP
   
 (*Heap initializer ensures that provided address is multiple of 8*)
 let heap_initializer =
-  asm_to_string ((getIMov (getReg getR11) (getReg getRDI)) @ 
+  asm_to_string ((getIMov (getReg getR15) (getReg getRDI)) @ 
+  (getIAdd (getReg getR15) (getConst 7L)) @
   (getIMov (getReg getR11) (getConst  0xfffffffffffffff8L)) @ 
   (getIAnd (getReg getR15) (getReg getR11)))
   

@@ -12,20 +12,29 @@ typedef uint64_t VAL;
 const uint64_t BOOL_TAG   = 0x0000000000000001;
 const VAL BOOL_TRUE =       0xffffffffffffffff;
 const VAL BOOL_FALSE =      0x7fffffffffffffff; // as chosen in compile.ml
+const VAL TUPLE_TAG = 0x1;
 
 char safe_type[2];
 
-VAL print(VAL val) {
-  if ((val & BOOL_TAG) == 0) { // val is even ==> number
-    printf("> %ld\n", ((int64_t)(val)) / 2); // shift bits right to remove tag
-  } else if (val == BOOL_TRUE) {
-    printf("> true\n");
-  } else if (val == BOOL_FALSE) {
-    printf("> false\n");
-  } else {
-    printf("> Unknown value: %#018x\n", (unsigned int)val); // print unknown val in hex
-  }
-  return val;
+void tuple_print_res(VAL *,VAL);
+VAL print_res(VAL);
+
+//Mal print pq no deja imprimir tuplas de tuplas
+void tuple_print_res(VAL * addrcount,VAL count){
+
+  
+    printf("(tup ");
+    for (int i=1;i<count+1;i++){
+    print_res(*(addrcount+i));
+    if (i!=count){
+    printf(" ");
+    }
+     }
+    printf(")");
+ 
+
+  
+
 }
 
 VAL print_res(VAL val) {
@@ -35,14 +44,31 @@ VAL print_res(VAL val) {
     printf("true");
   } else if (val == BOOL_FALSE) {
     printf("false");
-  } else {
+  } 
+  
+    else if ((val & TUPLE_TAG) == 1){
+      VAL* addrcount= (VAL*) (val-(VAL)1);
+      VAL count= *addrcount;
+      // printf("count = %#018x\n",count);
+      // printf("primer valor %#018x\n",*(addrcount+1));
+      
+      tuple_print_res(addrcount,count); // Este print está malo pq no deja printear tuplas de tuplas xd.
+      
+      
+    }
+  else {
     printf("Unknown value: %#018x", (unsigned int)val); // print unknown val in hex
   }
   return val;
 }
 // operation type
 
-
+VAL print(VAL val) {
+  printf("> ");
+  print_res(val);
+  printf("\n");
+  return val;
+}
 
 const int64_t MAXINT = INT64_MAX/2;
 const int64_t MININT = INT64_MIN/2;
@@ -188,7 +214,7 @@ int main(int argc, char** argv) {
     strcpy(safe_type,argv[1]);
   }
 
-
+  
   u64 result = our_code_starts_here(HEAP);
   print_res(result);
   free(HEAP);

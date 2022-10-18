@@ -1,0 +1,6 @@
+NAME: a tuple with 1 value
+DESCRIPTION: evaluates a tuple with 1 value
+SRC:
+(tup 1)
+EXPECTED:
+|ORACLE

@@ -1,0 +1,6 @@
+NAME: a tuple with multiple values
+DESCRIPTION: evaluates a tuple with multiple values
+SRC:
+(tup 1 false -9 true 8 0)
+EXPECTED:
+|ORACLE
