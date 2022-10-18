@@ -1,0 +1,6 @@
+NAME: a tuple with multiple tuples
+DESCRIPTION: evaluates a tuple within a tuple
+SRC:
+(tup (tup 4) 5)
+EXPECTED:
+|ORACLE

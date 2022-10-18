@@ -31,9 +31,6 @@ void tuple_print_res(VAL * addrcount,VAL count){
     }
      }
     printf(")");
- 
-
-  
 
 }
 
