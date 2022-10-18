@@ -479,9 +479,11 @@ let call_function_two_argument (funct: string) : instruction list =
           
 
 
-    and compile_tuple (e : tag expr list)(pos : int) (ntuples : int) =
-      match e with
-      | h::t -> getIMov (getRegOffset (getR15) "+" (getConst (Int64.of_int (8*1)))) h @ compile_tuple t pos
+    and compile_tuple (slot_list : int list)(pos : int) (ntuples : int) =
+      match slot_list with (* necesitamos que h sea la cabeza de los valores compilados*)
+      | h::t -> (getIMov (getRegOffset (getR15) "+" (8*ntuples)) (getRegOffset (getRBP) "-" (8*h))) @ 
+                (compile_tuple t pos ntuples)
+
       | [] ->  getIMov (getReg getRAX) (getReg getR15) @
                getIAdd (getReg getRAX) (getConst 1L) @ (*Se taggea la tupla*)
                getIAdd (getReg getR15) (getConst (Int64.of_int (8*(ntuples+1)))) (*Bump del header pointer*)   
@@ -499,7 +501,7 @@ let call_function_two_argument (funct: string) : instruction list =
     let list_env_slot= (generate_list_env_slot expr_list env) in
       (add_exprlist_to_stack expr_list expr_count env  funenv arg_count list_env_slot 0) @ 
       getIMov (getRegOffset (getReg getR15) "+" (getConst 0L) 0)    @ 
-      (compile_tuple expr_list env tag fuenv tuple_count)
+      (compile_tuple slot_list accum expr_count)
     
     (* let env` = List.nth list_env_slot (expr_count -1)
     let evaluated_saved_tuples =(tuple_save_evaluator expr_list expr_count tag 0 env funenv arg_count list_env_slot) in (*Evalua y guarda cada parte de la tupla en el stack*) 
