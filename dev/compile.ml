@@ -248,12 +248,11 @@ else
   if track_count<6 then  save_arguments_before_call arg_count (track_count+1) @ [IPush(List.nth register_arguments (track_count))] 
   else [IMov(Reg(RAX),RegOffset(RBP,"+",8))] @ [IPush (Reg(RAX))]
 
-
-let rec add_expr_to_stack (expr_list : tag expr list) (env:env) (tag:tag) =
-  match expr_list with
+ 
+  (* match expr_list with
     | _::t -> let (env',slot1) = add (sprintf "tuple_%d" tag) env LocalKind in
-              [slot1] @ (add_expr_to_stack t env'(tag+1))
-    | [] -> []
+              [(env',slot1)] @ (add_expr_to_stack t env'(tag+1))
+    | [] -> [] *)
 
 
 
@@ -349,9 +348,12 @@ let call_function_two_argument (funct: string) : instruction list =
     (*Nmero de expresiones en la tupla*)
     let expr_count = (List.length expr_list) in
     let accum = 1 in
-    (getIMov (getReg(getR10)) (getConst (Int64.of_int expr_count))) 
+    (eTuple expr_list expr_count tag accum env funenv arg_count)
+
+
+    (* (getIMov (getReg(getR10)) (getConst (Int64.of_int expr_count))) 
     @ (getIMov (getRegOffset getR15 "+" 0) (getReg getR10)) 
-    @ (eTuple expr_list expr_count tag accum env funenv arg_count)
+    @ (eTuple expr_list expr_count tag accum env funenv arg_count) *)
     (*Colocamos el size de la tupla*)
     (* (getIMov (getReg getR10) (getConst expr_number)) IMov(Reg(R10),Reg(Const(expr_number))  )  *)
     (*Evaluar cada elemento de la lista*)
@@ -443,7 +445,7 @@ let call_function_two_argument (funct: string) : instruction list =
        @ [IPop (Reg(RDI));IPop (Reg(RSI))]
        @ [IMov (Reg(RAX),RegOffset(RBP,"-",8*slot1))]
    
-    and tuple_evaluator (expr_list: tag expr list) (expr_count : int) (tag:tag) (accum : int) (env : env) 
+    (* and tuple_evaluator (expr_list: tag expr list) (expr_count : int) (tag:tag) (accum : int) (env : env) 
     (funenv : funenv) (arg_count : int) (list_env_slot :int list) =
     (* printf "List length = %i" (List.length list_env_slot); *)
     match expr_list with
@@ -460,22 +462,49 @@ let call_function_two_argument (funct: string) : instruction list =
 
     and tuple_save_evaluator (expr_list: tag expr list) (expr_count : int) (tag:tag) (*esta funcion guarda cada elemento de la tupla en el stack*)
     (accum : int) (env : env) (funenv : funenv) (arg_count : int) (list_env_slot :int list) =
-    (* printf "save List length = %i\n" (List.length list_env_slot);
+    printf "save List length = %i\n" (List.length list_env_slot);
     printf "save accum = %i\n" accum; *)
-    match expr_list with
+    (* match expr_list with
     | h::t -> let slot=(List.nth list_env_slot accum) in (*slot en cual guardar la compilación de un elemento de la tupla*)
       (* printf "save slot = %i\n" (slot);  *)
       (compile_expr h env funenv arg_count) 
     @ (getIMov (getRegOffset (getRBP) "-" (8*slot))(getReg(getRAX))) 
     @ (tuple_save_evaluator t expr_count tag (accum+1) env funenv arg_count list_env_slot)
-    | [] -> []
+    | [] -> [] *)
+    and generate_list_env_slot (expr_list:tag expr list) (env:env) =
+        match expr_list with
+            |h::t ->  let (env',slot1) = add (sprintf "tuple") env LocalKind in
+                    [(env',slot1)] @ (generate_list_env_slot t env')
+            |[] -> []
+          
+
+
+    and compile_tuple (e : tag expr list)(pos : int) (ntuples : int) =
+      match e with
+      | h::t -> getIMov (getRegOffset (getR15) "+" (getConst (Int64.of_int (8*1)))) h @ compile_tuple t pos
+      | [] ->  getIMov (getReg getRAX) (getReg getR15) @
+               getIAdd (getReg getRAX) (getConst 1L) @ (*Se taggea la tupla*)
+               getIAdd (getReg getR15) (getConst (Int64.of_int (8*(ntuples+1)))) (*Bump del header pointer*)   
+               
+    and add_exprlist_to_stack (expr_list : tag expr list) (expr_count : int) (env:env) (funenv:funenv) (arg_count:int) (list_env_slot: (env*int) list) (accum:int) =
+    let slot = (snd (List.nth list_env_slot accum)) in
+    let env' = (fst (List.nth list_env_slot (expr_count-1))) in
+    match expr_list with
+        | h:: t -> (compile_expr h env' funenv arg_count) @ (getIMov (getRegOffset (getRBP) "-" (8*slot)) (getReg getRAX))  
+                  @ (add_exprlist_to_stack t expr_count env' funenv arg_count list_env_slot (accum+1))
+        | [] -> []
 
     and eTuple (expr_list: tag expr list) (expr_count : int) (tag:tag) (accum : int) (env : env) (funenv : funenv) (arg_count : int) =
     
-    let list_env_slot=(add_expr_to_stack expr_list env tag) in (*Devuelve lista de cada parte de la tupla con [slot1,slot2,...]*)
+    let list_env_slot= (generate_list_env_slot expr_list env) in
+      (add_exprlist_to_stack expr_list expr_count env  funenv arg_count list_env_slot 0) @ 
+      getIMov (getRegOffset (getReg getR15) "+" (getConst 0L) 0)    @ 
+      (compile_tuple expr_list env tag fuenv tuple_count)
+    
+    (* let env` = List.nth list_env_slot (expr_count -1)
     let evaluated_saved_tuples =(tuple_save_evaluator expr_list expr_count tag 0 env funenv arg_count list_env_slot) in (*Evalua y guarda cada parte de la tupla en el stack*) 
     let evaluated_tuples = (tuple_evaluator expr_list expr_count tag accum env funenv arg_count list_env_slot) in
-    evaluated_saved_tuples @ evaluated_tuples
+    evaluated_saved_tuples @ evaluated_tuples *)
 
 (*Adds a list of variables to env*)
 let rec add_list (list_variables : string list) (env : env) (kind : kind) =
