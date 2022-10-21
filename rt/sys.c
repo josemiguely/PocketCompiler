@@ -19,14 +19,18 @@ char safe_type[2];
 void tuple_print_res(VAL *,VAL);
 VAL print_res(VAL);
 
-//Mal print pq no deja imprimir tuplas de tuplas
+//Recibre addres y cantidad de tuplaws
 void tuple_print_res(VAL * addrcount,VAL count){
-
-  
+    // printf("count esss = %lu\n",count);
+    if (count==0){
+      printf("(tup");
+    }
+    else{
     printf("(tup ");
+    }
     for (int i=1;i<count+1;i++){
     print_res(*(addrcount+i));
-    if (i!=count){
+    if (i<count){
     printf(" ");
     }
      }
@@ -49,7 +53,7 @@ VAL print_res(VAL val) {
       // printf("count = %#018x\n",count);
       // printf("primer valor %#018x\n",*(addrcount+1));
       
-      tuple_print_res(addrcount,count); // Este print está malo pq no deja printear tuplas de tuplas xd.
+      tuple_print_res(addrcount,count); // Se le entrega addr y cantidad de tuplas
       
       
     }

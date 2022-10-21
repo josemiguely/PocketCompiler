@@ -20,6 +20,7 @@ type arg =
 | Const of int64 (* explicit numeric constants *)
 | Reg of reg (* any named register*)
 | RegOffset of reg * string * int (*RegOffset(reg,i) represents adress [reg +- 8*i]*)
+| RegOffsetRR of reg * string * reg
 
 type instruction =
   | IMov of arg * arg (* Move the value of the right-side arg into the left-arg*)
@@ -67,6 +68,7 @@ let pp_arg arg : string =
   | Const n ->  sprintf "%#Lx" n
   | Reg r -> pp_reg r
   | RegOffset (reg,operation,slot) -> sprintf "[%s %s %s]" (pp_reg reg) (operation) (string_of_int slot)
+  | RegOffsetRR (reg,operation,reg2) -> sprintf "[%s %s %s]" (pp_reg reg) (operation) (pp_reg reg2)
 
 
 (** Transforms ASM instruction list to string*)

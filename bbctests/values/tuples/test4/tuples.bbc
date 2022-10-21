@@ -1,0 +1,6 @@
+NAME: a tuple with multiple tuples 2
+DESCRIPTION: evaluates a tuple within many tuples 2
+SRC:
+(tup (tup (tup (and false true) 2) (tup (not true) false) (+ 9 2) (- 8 2)))
+EXPECTED:
+|ORACLE

@@ -1,0 +1,7 @@
+NAME: a tuple with multiple tuples
+DESCRIPTION: evaluates a tuple within a tuple
+SRC:
+(let (t (tup (tup) true 42))
+  t)
+EXPECTED:
+|ORACLE

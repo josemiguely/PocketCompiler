@@ -1,0 +1,6 @@
+NAME: a tuple with multiple null tuples
+DESCRIPTION: evaluates multiples null tuples
+SRC:
+(tup (tup (tup (tup 2 3 (tup)) (tup))) false (tup))
+EXPECTED:
+|ORACLE
