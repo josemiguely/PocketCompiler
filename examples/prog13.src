@@ -1,9 +1,64 @@
-(
-    (def (f t)
-      (let 
-        ((tup x y z) t)
-        (+ (+ x y) z)
-      )
-    )
-    (f (tup 2 3 5))
-)
+section .text                       
+global our_code_starts_here
+extern error
+extern print
+extern check_overflow_add
+extern check_overflow_sub
+extern check_overflow_mul
+extern check_non_zero_denominator
+
+our_code_starts_here:
+  push RBP
+  mov RBP, RSP
+  sub RSP, 0x200
+  mov R15, RDI
+  add R15, 0x7
+  mov R11, 0xfffffffffffffff8
+  and R15, R11
+  mov RAX, 0x12
+  mov [RBP - 8], RAX
+  mov RAX, 0x4
+  mov [RBP - 16], RAX
+  mov RAX, 0x6
+  mov [RBP - 24], RAX
+  mov RAX, 0x8
+  mov [RBP - 32], RAX
+  mov RAX, 0xe
+  mov [RBP - 40], RAX
+  mov R10, 0x5
+  mov [R15 + 0], R10
+  mov RAX, [RBP - 8]
+  mov [R15 + 8], RAX
+  mov RAX, [RBP - 16]
+  mov [R15 + 16], RAX
+  mov RAX, [RBP - 24]
+  mov [R15 + 24], RAX
+  mov RAX, [RBP - 32]
+  mov [R15 + 32], RAX
+  mov RAX, [RBP - 40]
+  mov [R15 + 40], RAX
+  mov RAX, R15
+  add RAX, 0x1
+  add R15, 0x30
+  sub RAX, 0x1
+  mov R11, RAX
+  push R11
+  mov RAX, 0x2
+  imul RAX, 0x8
+  idiv 0x2
+  pop R11
+  add R11, RAX
+  mov RAX, [R11 + 0]
+  mov RSP, RBP
+  pop RBP
+  ret
+
+error_not_number:
+  mov RSI,RAX
+  mov RDI,0x1
+  call error
+  
+error_not_boolean:
+  mov RSI,RAX
+  mov RDI,0x2
+  call error

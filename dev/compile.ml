@@ -337,16 +337,22 @@ let call_function_two_argument (funct: string) : instruction list =
           let less_label = sprintf "less_%d" tag in
           scaffold 
           @ (eLt slot2 less_label))
-        | Get -> (compile_expr expr1 env funenv arg_count) (*Compilo el numero de acceso*)
-                @(getIMov (getReg getR10) (getReg getRAX) ) (*Dejo el resultado en R10*)
-                @ (getIPush (getReg getR10)) (*Pusheo R10*)
-                @ (compile_expr expr2 env funenv arg_count) (*Compilo la tupla*) (*Debo checkear que resultado es tuplas*)
-                @ (getISub (getReg getRAX) (getConst (1L)))
-                @ (getIPop (getReg getR10)) (*Recupero el n*)
-                @ (getIAdd (getReg getR10) (getConst 1L)) (*Le sumo 1*)
-                @ (getIMult (getReg getR10) (getConst 8L)) (*Lo multiplico por 8*)
-                @ (getIAdd (getReg getR10) (getReg getRAX)) (*Le sumo el resultado de la tupla para despues desreferenciarlo*)
-                @ (getIMov (getReg getRAX) (getRegOffset getR10 "+" 0))
+        | Get -> 
+          
+                (compile_expr expr1 env funenv arg_count) (*Compilo la tupla  y falta checkear que es tupla*)
+                @ (getISub (getReg getRAX) (getConst (1L))) (*Le saco el tag a la tupla*)
+                @ (getIMov (getReg getR11) (getReg getRAX) ) (*Dejo el resultado de la tupla en R10*)
+                @ (getIPush (getReg getR11)) (*Pusheo la tupla en R10*)
+                @ (compile_expr expr2 env funenv arg_count) (*Compilo la posicion n y falta ver que es valida*) 
+                @ (getIAdd (getReg getRAX) (getConst 1L))
+                @ (getIMult (getReg getRAX) (getConst 8L)) (*Lo multiplico por 8*)
+                (* @ (getIMov (getReg getR10) ((getConst 2L))) *)
+                (* @ (getICqo)
+                @ (getIDiv (getReg getR10)) *)
+                @ (getIPop (getReg getR11)) (*Recupero la tupla*)
+                @ (getIAdd (getReg getR11) (getReg getRAX)) (*Le sumo el resultado de del tamano n para despues desreferenciarlo*)
+                @ (getIMov (getReg getRAX) (getRegOffset getR11 "+" 0))
+               
                 
                  
         | _ -> failwith("Unexpected binary operation") ) 
@@ -362,7 +368,30 @@ let call_function_two_argument (funct: string) : instruction list =
     @ [IAdd(Reg(RSP),Const(res))] 
     @ restore_arguments_after_call arg_count 0
 
-  | Set (_,_,_,_) -> (failwith("tonta"))
+  | Set (t,k,v,_) -> 
+    (*test_tuple t @ test_k_number_less_than_len_t*)
+    (compile_expr t env funenv arg_count)   @
+    (getIMov (getReg getR11) (getReg getRAX) ) @ (*Dejo el resultado de la tupla en R10*)
+    (getIPush (getReg getR11))              @                (*Pusheo la tupla en R10*)
+    (compile_expr v env funenv arg_count)   @   (*R11 -> t  RAX -> v*)
+    getIMov (getReg getRDX) (getReg getRAX) @ (*gurado el nuevo valor en RDX ACAR BIEN DEL NUEVO VALOR *)
+    (getIPop (getReg getR11))               @
+    getIMov (getReg getRAX) (getReg getR11) @ (*  guardo la tupla en Rax SACAR BIEN EL VALOR DE LA TUPLA *)
+    getIMov (getReg getRCX) (getReg getRAX) @ (*Chequeo que la tupla t guardada en rax es una tupla*)
+    getIAnd (getReg getRCX) (getConst 7L)   @ (*|*)
+    getICmp (getReg getRCX) (getConst 1L)   @ (*|*)
+    (*getIJne not_a_tuple  Crear este salto *)
+    getISub (getReg getRAX) (getConst 1L)    @
+    getIMov (getReg getR10) (getReg getRAX)@
+    getIPush (getReg getR10) @
+    (compile_expr k env funenv arg_count)    @
+    getIPop (getReg getR10) @
+    (getIMult (getReg getRAX) (getConst 8L)) @  
+    getIMov (getRegOffset getRAX "+" getR10) (getReg getRDX) @
+    getIAdd (getReg getR10) (getConst 1L)
+    getIMov (getReg getRAX)(getReg getR10)
+    
+     
   | Tuple(expr_list,_) -> 
     (*Nmero de expresiones en la tupla*)
     let expr_number = List.length expr_list in
@@ -387,27 +416,6 @@ let call_function_two_argument (funct: string) : instruction list =
       @ getIMov (getRegOffset (getR15) "+"  ((8*0))) (getReg getR10) (*size de la tupla*)
       @ (compile_tuple env_slot 0 expr_number) (*Añado el resto de la tupla a HeapPointer y devuelvo Pointer*)
 
-    
-      
-                
-
-    (* let expr_count = (List.length expr_list) in
-    let accum = 1 in
-    (eTuple expr_list expr_count tag accum env funenv arg_count) *)
-
-
-    (* (getIMov (getReg(getR10)) (getConst (Int64.of_int expr_count))) 
-    @ (getIMov (getRegOffset getR15 "+" 0) (getReg getR10)) 
-    @ (eTuple expr_list expr_count tag accum env funenv arg_count) *)
-    (*Colocamos el size de la tupla*)
-    (* (getIMov (getReg getR10) (getConst expr_number)) IMov(Reg(R10),Reg(Const(expr_number))  )  *)
-    (*Evaluar cada elemento de la lista*)
-     (* @ match expr_list with
-      | h::t -> (getIMov (getRegOffset getR15 "+" 1) (getReg (compile_expr h env funenv arg_count))) 
-      | [] -> getIMov (getReg getRAX) (getReg getR15) @
-              getIAdd (getReg getRAX) (getConst 1L) @ (*tag de la tupla*)
-              getIAdd (getReg getR15) (getConst (Int64.of_int (8*(tuples+1)))) n elementos = expr_numner *)
-   
     
       
   (** Creates common scaffold for binary operations. For And operation it also includes short-circuit evaluation**)
@@ -490,32 +498,7 @@ let call_function_two_argument (funct: string) : instruction list =
        @ [IPop (Reg(RDI));IPop (Reg(RSI))]
        @ [IMov (Reg(RAX),RegOffset(RBP,"-",8*slot1))]
    
-    (* and tuple_evaluator (expr_list: tag expr list) (expr_count : int) (tag:tag) (accum : int) (env : env) 
-    (funenv : funenv) (arg_count : int) (list_env_slot :int list) =
-    (* printf "List length = %i" (List.length list_env_slot); *)
-    match expr_list with
-          | _::t -> 
-            let slot=(List.nth list_env_slot (accum-1)) in (*slot en cual recupear el resultado de la compilación de un elemento de la tupla*)
-            (* printf "slot = %i" (slot); *)
-            (getIMov (getReg(getRAX)) (getRegOffset getRBP  "-" (8*slot)))
-            @(getIMov (getRegOffset getR15 "+" (accum*8)) (getReg getRAX)) 
-            @ (tuple_evaluator t expr_count tag (accum+1) env funenv arg_count list_env_slot)
-          | [] -> getIMov (getReg getRAX) (getReg getR15) @
-                  getIAdd (getReg getRAX) (getConst 1L) @ (*Se taggea la tupla*)
-                  getIAdd (getReg getR15) (getConst (Int64.of_int (8*(expr_count+1)))) Bump del header pointer     *)
-    
 
-    (* and tuple_save_evaluator (expr_list: tag expr list) (expr_count : int) (tag:tag) (*esta funcion guarda cada elemento de la tupla en el stack*)
-    (accum : int) (env : env) (funenv : funenv) (arg_count : int) (list_env_slot :int list) =
-    printf "save List length = %i\n" (List.length list_env_slot);
-    printf "save accum = %i\n" accum; 
-     match expr_list with
-    | h::t -> let slot=(List.nth list_env_slot accum) in (*slot en cual guardar la compilación de un elemento de la tupla*)
-      (* printf "save slot = %i\n" (slot);  *)
-      (compile_expr h env funenv arg_count) 
-    @ (getIMov (getRegOffset (getRBP) "-" (8*slot))(getReg(getRAX))) 
-    @ (tuple_save_evaluator t expr_count tag (accum+1) env funenv arg_count list_env_slot)
-    | [] -> [] *)
     and generate_list_env_slot (expr_list:tag expr list) (env:env) : ((env*int) list) =
         match expr_list with
             |_::t ->  let (env',slot1) = add (sprintf "tuple") env LocalKind in
@@ -523,10 +506,8 @@ let call_function_two_argument (funct: string) : instruction list =
             |[] -> []
           
 
-            (* [IMov (Reg(RAX),RegOffset(RBP,"-",8*slot1))] *)
+            
     and compile_tuple (env_slot_list : (env*int) list)(pos : int) (number_of_elements : int) =
-    (* printf "pos %i\n" pos;
-    printf "number of tuples %i\n" number_of_elements; *)
     match env_slot_list with
       | _::t ->let slot = snd (List.nth env_slot_list 0) in
               (getIMov(getReg getRAX) (getRegOffset getRBP "-" (8*slot))) (*Recuperamos el valor del stack y lo dejamos en RAX*)
@@ -536,26 +517,6 @@ let call_function_two_argument (funct: string) : instruction list =
                getIAdd (getReg getRAX) (getConst 1L) @ (*Se taggea la tupla*)
                getIAdd (getReg getR15) (getConst (Int64.of_int (8*(number_of_elements+1)))) (*Bump del header pointer*)   
                
-    (* and add_exprlist_to_stack (expr_list : tag expr list) (expr_count : int) (env:env) (funenv:funenv) (arg_count:int) (list_env_slot: (env*int) list) (accum:int) =
-    let slot = (snd (List.nth list_env_slot accum)) in
-    let env' = (fst (List.nth list_env_slot (expr_count-1))) in
-    match expr_list with
-        | h:: t -> (compile_expr h env' funenv arg_count) @ (getIMov (getRegOffset (getRBP) "-" (8*slot)) (getReg getRAX))  
-                  @ (add_exprlist_to_stack t expr_count env' funenv arg_count list_env_slot (accum+1))
-        | [] -> [] *)
-
-    (* and eTuple (expr_list: tag expr list) (expr_count : int) (tag:tag) (accum : int) (env : env) (funenv : funenv) (arg_count : int) =
-    
-    let list_env_slot= (generate_list_env_slot expr_list env) in
-      (add_exprlist_to_stack expr_list expr_count env  funenv arg_count list_env_slot 0) @ 
-      (* getIMov (getRegOffset (getReg getR15) "+" (getConst 0L) 0)    @  *)
-      (compile_tuple expr_list env tag fuenv tuple_count) *)
-    
-    (* let env` = List.nth list_env_slot (expr_count -1)
-    let evaluated_saved_tuples =(tuple_save_evaluator expr_list expr_count tag 0 env funenv arg_count list_env_slot) in (*Evalua y guarda cada parte de la tupla en el stack*) 
-    let evaluated_tuples = (tuple_evaluator expr_list expr_count tag accum env funenv arg_count list_env_slot) in
-    evaluated_saved_tuples @ evaluated_tuples *)
-
 (*Adds a list of variables to env*)
 let rec add_list (list_variables : string list) (env : env) (kind : kind) =
    match list_variables with
