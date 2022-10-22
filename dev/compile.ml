@@ -344,6 +344,7 @@ let call_function_two_argument (funct: string) : instruction list =
                 @ (getIMov (getReg getR11) (getReg getRAX) ) (*Dejo el resultado de la tupla en R10*)
                 @ (getIPush (getReg getR11)) (*Pusheo la tupla en R10*)
                 @ (compile_expr expr2 env funenv arg_count) (*Compilo la posicion n y falta ver que es valida*) 
+                @ (getISar (getReg getRAX) (getConst 1L) )
                 @ (getIAdd (getReg getRAX) (getConst 1L))
                 @ (getIMult (getReg getRAX) (getConst 8L)) (*Lo multiplico por 8*)
                 (* @ (getIMov (getReg getR10) ((getConst 2L))) *)
@@ -374,22 +375,26 @@ let call_function_two_argument (funct: string) : instruction list =
     (getIMov (getReg getR11) (getReg getRAX) ) @ (*Dejo el resultado de la tupla en R10*)
     (getIPush (getReg getR11))              @                (*Pusheo la tupla en R10*)
     (compile_expr v env funenv arg_count)   @   (*R11 -> t  RAX -> v*)
-    getIMov (getReg getRDX) (getReg getRAX) @ (*gurado el nuevo valor en RDX ACAR BIEN DEL NUEVO VALOR *)
+    (getISar (getReg getRAX) (getConst 1L) ) @ 
+    getIMov (getReg getRDX) (getReg getRAX) @  (* guardo el nuevo valor V en RDX  *)
     (getIPop (getReg getR11))               @
-    getIMov (getReg getRAX) (getReg getR11) @ (*  guardo la tupla en Rax SACAR BIEN EL VALOR DE LA TUPLA *)
-    getIMov (getReg getRCX) (getReg getRAX) @ (*Chequeo que la tupla t guardada en rax es una tupla*)
-    getIAnd (getReg getRCX) (getConst 7L)   @ (*|*)
-    getICmp (getReg getRCX) (getConst 1L)   @ (*|*)
+    getIMov (getReg getRAX) (getReg getR11) @ (*  Guardo la tupla en Rax SACAR BIEN EL VALOR DE LA TUPLA *)
+    getIMov (getReg getRCX) (getReg getRAX) @ (*/                                                      *)
+    getIAnd (getReg getRCX) (getConst 7L)   @ (*|   Chequeo que t guardado en rax es una tupla         *)
+    getICmp (getReg getRCX) (getConst 1L)   @ (*/                                                      *)
     (*getIJne not_a_tuple  Crear este salto *)
-    getISub (getReg getRAX) (getConst 1L)    @
-    getIMov (getReg getR10) (getReg getRAX)@
-    getIPush (getReg getR10) @
-    (compile_expr k env funenv arg_count)    @
+    getISub (getReg getRAX) (getConst 1L)    @ (*Quitamos la tag tag de tupla*)
+    getIMov (getReg getR10) (getReg getRAX)  @
+    getIPush (getReg getR10) @                 (*R10 tiene la tupla*)
+    (compile_expr k env funenv arg_count)    @ (* RAX tiene a k *)
+    (getISar (getReg getRAX) (getConst 1L) )@
     getIPop (getReg getR10) @
-    (getIMult (getReg getRAX) (getConst 8L)) @  
-    getIMov (getRegOffset getRAX "+" getR10) (getReg getRDX) @
-    getIAdd (getReg getR10) (getConst 1L)
-    getIMov (getReg getRAX)(getReg getR10)
+    (getIMult (getReg getRAX) (getConst 8L)) @ (* k*8 *)
+    getIAdd (getReg getRAX) (getReg getR10) @  (* [RAX + k*8]*) 
+    getIMov (getReg getRAX) (getReg getRDX)    (* [RAX + k*8] -> V*)
+    @ (getIMov (getRegOffset getRAX "+" 0) (getReg getRDX))
+    @getIAdd (getReg getR10) (getConst 1L) @
+     getIMov (getReg getRAX)(getReg getR10)
     
      
   | Tuple(expr_list,_) -> 
