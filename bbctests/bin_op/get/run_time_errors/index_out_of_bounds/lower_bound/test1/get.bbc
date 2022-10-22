@@ -1,0 +1,6 @@
+NAME: get with a negative index
+DESCRIPTION: breaks with runtime error because the index is less than 0
+SRC:
+(get (tup 1 2 3) -2)
+EXPECTED:
+|ORACLE

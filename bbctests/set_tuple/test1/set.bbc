@@ -1,0 +1,6 @@
+NAME: set new value as a tuple
+DESCRIPTION: set a new value as a tuple
+SRC:
+(set (tup 1 (tup false true)) 4) 0 (tup false false (tup (tup)))) 
+EXPECTED:
+|ORACLE

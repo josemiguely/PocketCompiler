@@ -170,6 +170,11 @@ let test_tuple_instruction =    (getIMov (getReg getRCX) (getReg getRAX))
                               @ (getIJne "error_not_tuple")
 
 
+let test_index_out_of_bounds =  (getICmp (getReg (getRAX))(getConst 0L) ) (* Si se quiere acceder a una posicion menor que 0 entonces tirar error *)
+                              @ (getIJl ("error_tuple_index_error"))
+                              @ (getICmp (getReg (getRAX)) (getRegOffset getR11 "+" 0)) (*Si se quiere acceder a un indice mas grande tira error *)
+                              @ (getIJge ("error_tuple_index_error"))
+
 (*Compile_expr pure functions*)
 
 let eNum (n:int64)= 
@@ -349,16 +354,14 @@ let call_function_two_argument (funct: string) : instruction list =
                 @ (getIPush (getReg getR11)) (*Pusheo la tupla en R11*)
                 @ (compile_expr expr2 env funenv arg_count) (*Compilo la posicion n y falta ver que es valida*) 
                 @ (getIPop (getReg getR11)) (*Recupero la tupla*)
-                @ (getISar (getReg getRAX) (getConst 1L) ) (*Se divide el numero de la posicion en 2*)
-                @ (getICmp (getReg (getRAX)) (getConst 0L)) (* Si se quiere acceder a una posicion menor que 0 entonces tirar error *)
-                @ (getIJl ("error_tuple_index_error"))
-                (* @ (getICmp (getReg (getRAX)) (getRegOffset getR11 "+" 0)) Si se quiere acceder a un indice mas grande tira error *)
-                (* @ (getIJge ("tuple_index_error")) *)
+                @ (getISar (getReg getRAX) (getConst 1L) )(*Se divide el numero de la posicion en 2*)
+                @ test_index_out_of_bounds
                 @ (getIAdd (getReg getRAX) (getConst 1L))
                 @ (getIMult (getReg getRAX) (getConst 8L)) (*Lo multiplico por 8*)
                 @ (getIAdd (getReg getR11) (getReg getRAX)) (*Le sumo el resultado de del tamano n para despues desreferenciarlo*)
                 @ (getIMov (getReg getRAX) (getRegOffset getR11 "+" 0))           
         | _ -> failwith("Unexpected binary operation") ) 
+
   | Apply(id,expr_list,_) -> 
     let instr = arg_list_evaluator expr_list env 0 funenv arg_count in (*First we eval Apply arguments*)
     let arg_number = List.length expr_list in
@@ -379,11 +382,15 @@ let call_function_two_argument (funct: string) : instruction list =
     @ (getISub (getReg getRAX) (getConst 1L))     (*Quitamos la tag tag de tupla*)
     @ (getIMov (getReg getR11) (getReg getRAX) ) (* Dejo el resultado de la tupla en R11*)
     @ (getIPush (getReg getR11))                 (*Pusheo la tupla en R11*)
-    
+
     @ (compile_expr k env funenv arg_count)     (* RAX tiene a k *)
+    @ getIPop (getReg getR11)
     @ (getISar (getReg getRAX) (getConst 1L) )
+    
+    @ test_index_out_of_bounds
     @ (getIAdd (getReg getRAX) (getConst 1L)) 
-    @ (getIMov (getReg getR10) (getReg getRAX)) 
+    @ (getIMov (getReg getR10) (getReg getRAX))
+    @ (getIPush (getReg getR11)) 
     @ (getIPush (getReg getR10))  (*R11 tiene la tupla , R10 k*)
 
     @ (compile_expr v env funenv arg_count) 
@@ -595,10 +602,14 @@ error_not_tuple:
   call error
 
 error_tuple_index_error:
-  mov RSI,RAX
   mov RDI,R11
+  mov RSI,RAX
+  add R11,0x1
   call tuple_index_error
 "
+(* call print *)
+(* mov RDI,R11 *)
+(* mov RSI,RAX *)
 
 let prologue ="  mov RSP, RBP
   pop RBP

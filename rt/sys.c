@@ -205,10 +205,11 @@ void error(int errCode, VAL val){
   exit(errCode);
 }
 
-void tuple_index_error (VAL tuple,int index){
-  printf("TUPLE INDEX");
-  printf("Index out of bounds: Tried to acces index %i of ",index);
-  print_res(tuple);
+void tuple_index_error (VAL* tuple,int index){
+  printf("Index out of bounds: Tried to access index %i of ",index);
+  VAL count = *(tuple);
+  tuple_print_res(tuple,count);
+  exit(-1);
 }
 
 

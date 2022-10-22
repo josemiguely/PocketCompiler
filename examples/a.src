@@ -1,0 +1,68 @@
+section .text                       
+global our_code_starts_here
+extern error
+extern print
+extern check_overflow_add
+extern check_overflow_sub
+extern check_overflow_mul
+extern check_non_zero_denominator
+extern tuple_index_error
+
+our_code_starts_here:
+  push RBP
+  mov RBP, RSP
+  sub RSP, 0x200
+  mov R15, RDI
+  add R15, 0x7
+  mov R11, 0xfffffffffffffff8
+  and R15, R11
+  mov RAX, 0x2
+  mov [RBP - 8], RAX
+  mov R10, 0x1
+  mov [R15 + 0], R10
+  mov RAX, [RBP - 8]
+  mov [R15 + 8], RAX
+  mov RAX, R15
+  add RAX, 0x1
+  add R15, 0x10
+  mov RCX, RAX
+  and RCX, 0x7
+  cmp RCX, 0x1
+  jne error_not_tuple
+  sub RAX, 0x1
+  mov R11, RAX
+  push R11
+  mov RAX, 0xfffffffffffffffc
+  pop R11
+  sar RAX, 0x1
+  cmp 0, RAX
+  jl error_tuple_index_error
+  add RAX, 0x1
+  imul RAX, 0x8
+  add R11, RAX
+  mov RAX, [R11 + 0]
+  mov RSP, RBP
+  pop RBP
+  ret
+
+error_not_number:
+  mov RSI,RAX
+  mov RDI,0x1
+  call error
+  
+error_not_boolean:
+  mov RSI,RAX
+  mov RDI,0x2
+  call error
+
+error_not_tuple:
+  mov RSI,RAX
+  mov RDI,0x3
+  call error
+
+error_tuple_index_error:
+  mov RSI,RAX
+  call print
+  add R11,0x1
+  mov RDI,R11
+  call tuple_index_error

@@ -1,6 +1,6 @@
-NAME: Negative index out of range on set
+NAME: Positive index out of range on set
 DESCRIPTION: breaks with runtime error because of try to access an index out of range with set
 SRC:
-(set (tup 1 2) -3 1)
+(set (tup 0 1 2 3 4 5) 6 1)
 EXPECTED:
 |ORACLE

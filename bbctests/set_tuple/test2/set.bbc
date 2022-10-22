@@ -1,0 +1,6 @@
+NAME: a simple use set 
+DESCRIPTION: set a new value in a tuple 
+SRC:
+(set (tup 1 2) 1 5)
+EXPECTED:
+|ORACLE
