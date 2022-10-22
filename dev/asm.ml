@@ -36,6 +36,7 @@ type instruction =
   | IJmp of string (* Moves execution flow to string label*)
   | IJz of string (*Moves execution flow to string label if zero flag is set*)
   | IJnz of string (*Moves execution flow to string label if not zero flag is set*)
+  | IJge of string (*Moves execution flow to string label if greater equl in cmp instruction*)
   | ITest of arg * arg(*Tests two numbers by a logical and*)
   | IXor of arg * arg
   | ILabel of string (*Section of code*)
@@ -89,6 +90,7 @@ let rec asm_to_string (asm : instruction list) : string =
   | [IJz (arg1)] -> sprintf "  jz %s\n" (arg1)
   | [IJnz (arg1)] -> sprintf "  jnz %s\n" (arg1)
   | [IJmp (arg1)] -> sprintf "  jmp %s\n" (arg1)
+  | [IJge (arg1)] -> sprintf "  jge %s\n" (arg1)
   | [ILabel (arg1)] -> sprintf "  %s:\n" (arg1)
   | [ITest (arg1,arg2)] -> sprintf "  test %s, %s\n" (pp_arg arg1) (pp_arg arg2)
   | [ICall (arg1)] -> sprintf "  call %s\n" (arg1)

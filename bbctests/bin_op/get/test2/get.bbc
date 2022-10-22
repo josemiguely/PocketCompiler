@@ -1,0 +1,6 @@
+NAME: a get of a tuple
+DESCRIPTION: evaluates a get of position 1 of a tuple
+SRC:
+(get (tup 1 -2) 1)
+EXPECTED:
+|ORACLE

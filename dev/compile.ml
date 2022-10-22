@@ -13,7 +13,7 @@ let max_int = Int64.div Int64.max_int 2L
 
 let test_number = 0x0000000000000001L (*Number used in some tests instruction*)
 
-(* let test_tuple = 0x00000000000000001L *)
+let test_tuple = 0x0000000000000001L
 
 let save_register_arguments_before_call = 
 [IPush(Reg(R9));IPush(Reg(R8));IPush(Reg(RCX));IPush(Reg(RDX));IPush(Reg(RSI));IPush(Reg(RDI))]
@@ -22,9 +22,6 @@ let pop_arguments_after_call =
 [IPop(Reg(RDI));IPop(Reg(RSI));IPop(Reg(RDX));IPop(Reg(RCX));IPop(Reg(R8));IPop(Reg(R9))]
 
 
-let test_number_instruction = [ITest (Reg(RAX),Const(test_number))] @ [IJnz("error_not_number")]
-
-let test_boolean_instruction = [ITest (Reg(RAX),Const(test_number))] @ [IJz("error_not_boolean")]
 
 (* let test_tuple_instruction = (getITest ) *)
 
@@ -117,7 +114,7 @@ let getIJl (label : string ) =
 
 
 let getIJne (label : string ) =
-  [IJe(label)]
+  [IJne(label)]
 
 
 let getIJmp (label : string ) =
@@ -130,6 +127,9 @@ let getIJz (label : string ) =
 
 let getIJnz (label : string ) =
   [IJnz(label)]
+
+let getIJge (label : string) =
+  [IJge(label)]
 
 let getITest (arg1 : arg) (arg2 : arg) =
   [ITest(arg1,arg2)]
@@ -158,6 +158,16 @@ let getISar (arg1 : arg) (arg2 : arg)=
 let getICqo = [ICqo]
 
 let getIRet = [IRet]
+
+
+let test_number_instruction = [ITest (Reg(RAX),Const(test_number))] @ [IJnz("error_not_number")]
+
+let test_boolean_instruction = [ITest (Reg(RAX),Const(test_number))] @ [IJz("error_not_boolean")]
+
+let test_tuple_instruction =    (getIMov (getReg getRCX) (getReg getRAX))  
+                              @ (getIAnd (getReg getRCX) (getConst 7L))          
+                              @ (getICmp (getReg getRCX) (getConst 1L))
+                              @ (getIJne "error_not_tuple")
 
 
 (*Compile_expr pure functions*)
@@ -256,12 +266,6 @@ else
   else [IMov(Reg(RAX),RegOffset(RBP,"+",8))] @ [IPush (Reg(RAX))]
 
  
-  (* match expr_list with
-    | _::t -> let (env',slot1) = add (sprintf "tuple_%d" tag) env LocalKind in
-              [(env',slot1)] @ (add_expr_to_stack t env'(tag+1))
-    | [] -> [] *)
-
-
 
 (*Restore arguments after calling a new function*)
 let rec restore_arguments_after_call (arg_count : int) (track_count : int) : instruction list  =
@@ -338,24 +342,22 @@ let call_function_two_argument (funct: string) : instruction list =
           scaffold 
           @ (eLt slot2 less_label))
         | Get -> 
-          
-                (compile_expr expr1 env funenv arg_count) (*Compilo la tupla  y falta checkear que es tupla*)
+                (compile_expr expr1 env funenv arg_count) (*Compilo la tupla *)
+                 @ test_tuple_instruction (*Checkeo si en RAX hay una tupla *)
                 @ (getISub (getReg getRAX) (getConst (1L))) (*Le saco el tag a la tupla*)
-                @ (getIMov (getReg getR11) (getReg getRAX) ) (*Dejo el resultado de la tupla en R10*)
-                @ (getIPush (getReg getR11)) (*Pusheo la tupla en R10*)
+                @ (getIMov (getReg getR11) (getReg getRAX) ) (*Dejo el resultado de la tupla en R11*)
+                @ (getIPush (getReg getR11)) (*Pusheo la tupla en R11*)
                 @ (compile_expr expr2 env funenv arg_count) (*Compilo la posicion n y falta ver que es valida*) 
-                @ (getISar (getReg getRAX) (getConst 1L) )
+                @ (getIPop (getReg getR11)) (*Recupero la tupla*)
+                @ (getISar (getReg getRAX) (getConst 1L) ) (*Se divide el numero de la posicion en 2*)
+                @ (getICmp (getReg (getRAX)) (getConst 0L)) (* Si se quiere acceder a una posicion menor que 0 entonces tirar error *)
+                @ (getIJl ("error_tuple_index_error"))
+                (* @ (getICmp (getReg (getRAX)) (getRegOffset getR11 "+" 0)) Si se quiere acceder a un indice mas grande tira error *)
+                (* @ (getIJge ("tuple_index_error")) *)
                 @ (getIAdd (getReg getRAX) (getConst 1L))
                 @ (getIMult (getReg getRAX) (getConst 8L)) (*Lo multiplico por 8*)
-                (* @ (getIMov (getReg getR10) ((getConst 2L))) *)
-                (* @ (getICqo)
-                @ (getIDiv (getReg getR10)) *)
-                @ (getIPop (getReg getR11)) (*Recupero la tupla*)
                 @ (getIAdd (getReg getR11) (getReg getRAX)) (*Le sumo el resultado de del tamano n para despues desreferenciarlo*)
-                @ (getIMov (getReg getRAX) (getRegOffset getR11 "+" 0))
-               
-                
-                 
+                @ (getIMov (getReg getRAX) (getRegOffset getR11 "+" 0))           
         | _ -> failwith("Unexpected binary operation") ) 
   | Apply(id,expr_list,_) -> 
     let instr = arg_list_evaluator expr_list env 0 funenv arg_count in (*First we eval Apply arguments*)
@@ -371,30 +373,30 @@ let call_function_two_argument (funct: string) : instruction list =
 
   | Set (t,k,v,_) -> 
     (*test_tuple t @ test_k_number_less_than_len_t*)
-    (compile_expr t env funenv arg_count)   @
-    (getIMov (getReg getR11) (getReg getRAX) ) @ (*Dejo el resultado de la tupla en R10*)
-    (getIPush (getReg getR11))              @                (*Pusheo la tupla en R10*)
-    (compile_expr v env funenv arg_count)   @   (*R11 -> t  RAX -> v*)
-    (getISar (getReg getRAX) (getConst 1L) ) @ 
-    getIMov (getReg getRDX) (getReg getRAX) @  (* guardo el nuevo valor V en RDX  *)
-    (getIPop (getReg getR11))               @
-    getIMov (getReg getRAX) (getReg getR11) @ (*  Guardo la tupla en Rax SACAR BIEN EL VALOR DE LA TUPLA *)
-    getIMov (getReg getRCX) (getReg getRAX) @ (*/                                                      *)
-    getIAnd (getReg getRCX) (getConst 7L)   @ (*|   Chequeo que t guardado en rax es una tupla         *)
-    getICmp (getReg getRCX) (getConst 1L)   @ (*/                                                      *)
-    (*getIJne not_a_tuple  Crear este salto *)
-    getISub (getReg getRAX) (getConst 1L)    @ (*Quitamos la tag tag de tupla*)
-    getIMov (getReg getR10) (getReg getRAX)  @
-    getIPush (getReg getR10) @                 (*R10 tiene la tupla*)
-    (compile_expr k env funenv arg_count)    @ (* RAX tiene a k *)
-    (getISar (getReg getRAX) (getConst 1L) )@
-    getIPop (getReg getR10) @
-    (getIMult (getReg getRAX) (getConst 8L)) @ (* k*8 *)
-    getIAdd (getReg getRAX) (getReg getR10) @  (* [RAX + k*8]*) 
-    getIMov (getReg getRAX) (getReg getRDX)    (* [RAX + k*8] -> V*)
-    @ (getIMov (getRegOffset getRAX "+" 0) (getReg getRDX))
-    @getIAdd (getReg getR10) (getConst 1L) @
-     getIMov (getReg getRAX)(getReg getR10)
+     (compile_expr t env funenv arg_count)   
+    (*@ (getIMov (getReg getRAX) (getReg getR11))    Guardo la tupla en Rax  *)   
+    @ test_tuple_instruction  
+    @ (getISub (getReg getRAX) (getConst 1L))     (*Quitamos la tag tag de tupla*)
+    @ (getIMov (getReg getR11) (getReg getRAX) ) (* Dejo el resultado de la tupla en R11*)
+    @ (getIPush (getReg getR11))                 (*Pusheo la tupla en R11*)
+    
+    @ (compile_expr k env funenv arg_count)     (* RAX tiene a k *)
+    @ (getISar (getReg getRAX) (getConst 1L) )
+    @ (getIAdd (getReg getRAX) (getConst 1L)) 
+    @ (getIMov (getReg getR10) (getReg getRAX)) 
+    @ (getIPush (getReg getR10))  (*R11 tiene la tupla , R10 k*)
+
+    @ (compile_expr v env funenv arg_count) 
+    @ (getIMov (getReg getRDX) (getReg getRAX)) (* guardo el nuevo valor V en RDX  *) 
+    @ (getIPop (getReg getR10))               
+    @ (getIPop (getReg getR11)) 
+    @ (getIMov (getReg getRAX) (getReg getR11))
+    
+    @ (getIMult (getReg getR10) (getConst 8L))  (* k*8 *)
+    @ (getIAdd (getReg getR11) (getReg getR10))   (* tupla sin tag + k*8   *) 
+    @ (getIMov (getRegOffset getR11 "+" 0) (getReg getRDX))  (* [tupla + k*8] <- V *)
+    @ (getIAdd (getReg getRAX) (getConst 1L) )
+     (*@  (getIMov (getReg getRAX) (getReg getR10)) Guardo en RAX la tupla con el tag *)
     
      
   | Tuple(expr_list,_) -> 
@@ -567,7 +569,7 @@ let rec compile_list_fundef (f_list:fundef list) (fun_env : funenv) : (string * 
   | [] -> ("",fun_env) 
 
 let extern_list = 
-  ["error";"print";"check_overflow_add";"check_overflow_sub";"check_overflow_mul";"check_non_zero_denominator"]
+  ["error";"print";"check_overflow_add";"check_overflow_sub";"check_overflow_mul";"check_non_zero_denominator";"tuple_index_error"]
 
 
 let rec extern_functions (s:string list): string =
@@ -586,6 +588,16 @@ error_not_boolean:
   mov RSI,RAX
   mov RDI,0x2
   call error
+
+error_not_tuple:
+  mov RSI,RAX
+  mov RDI,0x3
+  call error
+
+error_tuple_index_error:
+  mov RSI,RAX
+  mov RDI,R11
+  call tuple_index_error
 "
 
 let prologue ="  mov RSP, RBP

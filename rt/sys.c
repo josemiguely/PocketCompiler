@@ -176,6 +176,7 @@ void check_non_zero_denominator (VAL d){
 //Error codes
 const int ERR_NOT_NUMBER=1;
 const int ERR_NOT_BOOLEAN=2;
+const int ERR_NOT_TUPLE=3;
 
 void error(int errCode, VAL val){
  
@@ -191,12 +192,26 @@ void error(int errCode, VAL val){
     print_res(val);
     // printf("\n");
   }
+
+  else if (errCode == ERR_NOT_TUPLE){
+    printf("Type error: Expected tuple but got ");
+    print_res(val);
+  }
+
   else{
-    printf("Not Boolean or Number, mayor bug in code");
+    printf("Error code not recognized, mayor bug in code");
   }
   
   exit(errCode);
 }
+
+void tuple_index_error (VAL tuple,int index){
+  printf("TUPLE INDEX");
+  printf("Index out of bounds: Tried to acces index %i of ",index);
+  print_res(tuple);
+}
+
+
 
 
 int main(int argc, char** argv) {

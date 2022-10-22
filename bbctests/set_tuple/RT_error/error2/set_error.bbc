@@ -1,0 +1,7 @@
+NAME: Index out of range on set
+DESCRIPTION: breaks with runtime error because of try to access an index out of range with set
+STATUS: RT error
+SRC:
+(set (tup 1 2) -3 1)
+EXPECTED:
+Type error: Index out of bounds: Tried to access index -3 of (tup 1 2)

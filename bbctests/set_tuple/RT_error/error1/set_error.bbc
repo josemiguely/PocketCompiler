@@ -1,0 +1,7 @@
+NAME: Use set within a tuple
+DESCRIPTION: breaks with runtime error because dont apply set on a tuple
+STATUS: RT error
+SRC:
+(set 7 4 1)
+EXPECTED:
+Type error: Expected tuple but got 7

@@ -1,0 +1,6 @@
+NAME: a get of atuple
+DESCRIPTION: evaluates a get of position 0 of a tuple that returns a tuple
+SRC:
+(get (tup 1 (tup false true)) 1)
+EXPECTED:
+|ORACLE

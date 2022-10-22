@@ -1,6 +1,0 @@
-NAME: evaluates a get of a tuple
-DESCRIPTION: evaluates a get of a tuple
-SRC:
-(get 1 (tup 1))
-EXPECTED:
-|ORACLE
