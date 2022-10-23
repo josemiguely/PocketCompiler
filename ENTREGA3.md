@@ -30,7 +30,7 @@ Se logró implementar los constructores para la declaración de un record:
 También los constructores para la compilación de un record:
 ```‹expr›: ... | ( recordId ‹expr› ... ) | ( recordId-fieldId ‹expr› )```
 
-También se extendió el parser con records en `parse.ml`. No se logró la implementar la compilación de records.
+También se extendió el parser con records en `parse.ml`. No se logró implementar la compilación de records.
 
 ## Otros cambios
 
