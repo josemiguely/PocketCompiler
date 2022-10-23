@@ -8,7 +8,7 @@
 
 Se implementó tuplas utilizando el heap, el cual es proveído en el `main` de `sys.c`. Este se utiliza como un heap pointer en el registro `R15` de nuestro compilador. 
 
-Se compilo la tupla de manera recursiva a través de sus elementos en sentido de izquierda-derecha. De esta forma en las tuplas anidadas, las direcciones de memoria que apuntan a otra tupla están en un espacio de memoria menor al que se encuentran.
+Se compilo la tupla de manera recursiva a través de sus elementos en sentido de izquierda-derecha. De esta forma en las tuplas anidadas las direcciones de memoria que apuntan a otra tupla están en un espacio de memoria menor al que se encuentran.
 
 Dado que no existe ANF los elementos de las tuplas fueron guardados en stack.
 
