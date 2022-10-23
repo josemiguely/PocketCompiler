@@ -61,5 +61,5 @@ Se mantienen los test de la entrega anterior: Se agregan test para el nuevo tipo
 - En *set* y *get* se testea el error en tiempo de ejecución de acceder a un indice negativo de la una tupla
 - En *set* y *get* se testea el error en tiempo de ejecución de acceder a un indice fuera del tamaño de la tupla.
 
-La verificación de que una expresión es una tupla se agregó en la función `error` de `sys.c`. Los errores de indice se hicieron con la función `tuple_index_error` en C.
+La verificación de que una expresión es una tupla se agregó en la función `error` de `sys.c`. Los errores de indice se hicieron con la función `tuple_index_error` en `sys.c`.
 
