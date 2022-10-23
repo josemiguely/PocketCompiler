@@ -1,6 +1,6 @@
 NAME: get with a index greater than the tuple size
 DESCRIPTION: breaks with runtime error because the index is greater than the tuple size
 SRC:
-(get (tup 1 2 3) 6)
+(get (tup (tup 1 2 3) (tup 2 false) false true true (tup false (and false true))) 7)
 EXPECTED:
 |ORACLE

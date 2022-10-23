@@ -63,6 +63,11 @@ let rec parse_prog (sexp : sexp) : prog =
         [ DefSys (name, arg_types, ret_type) ] @ funcdefs, expr
       | _ -> raise (CTError (sprintf "Not a valid type declaration: %s" (to_string (`List arg_spec))))
       )
+    | `List [`Atom "record"; `List [exprs]], _ ->
+      let (defs, expr) = parse_prog (`List tl) in
+      let exps =  List.map parse_arg_name [exprs] in
+      [Record (exps) ] @ defs, expr
+      
     | _, [] -> [], parse_exp hd
     | _ -> [], parse_exp sexp
   )
@@ -72,6 +77,12 @@ and parse_arg_name (sexp : sexp) : string =
   match sexp with
   | `Atom name -> name
   | _ -> raise (CTError (sprintf "Not a valid argument name: %s" (to_string sexp)))
+
+(* and parse_arg_records (sexp : sexp) : tag expr =
+match sexp with
+  | `Atom name -> parse_exp name
+  | _ -> raise (CTError (sprintf "Not a valid record argument: %s" (to_string sexp))) *)
+
 
 and parse_c_type (sexp : sexp) : ctype =
   match sexp with

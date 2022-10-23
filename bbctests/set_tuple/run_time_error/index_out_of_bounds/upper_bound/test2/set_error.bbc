@@ -1,0 +1,6 @@
+NAME: Positive index out of range on set
+DESCRIPTION: breaks with runtime error because of an access to an index out of range
+SRC:
+(set (tup (tup 2 3) (tup 99 2) 2 3 4 (tup 8 false)) 99 1)
+EXPECTED:
+|ORACLE

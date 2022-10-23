@@ -1,4 +1,4 @@
-NAME: a get of atuple
+NAME: a get of a tuple
 DESCRIPTION: evaluates a get of position 0 of a tuple that returns a tuple
 SRC:
 (get (tup 1 (tup false true)) 1)

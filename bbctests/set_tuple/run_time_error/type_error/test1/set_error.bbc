@@ -1,0 +1,6 @@
+NAME: Use set within a tuple
+DESCRIPTION: breaks with runtime error because set is not applied on a tuple
+SRC:
+(set (+ 3 4) 4 1)
+EXPECTED:
+|ORACLE

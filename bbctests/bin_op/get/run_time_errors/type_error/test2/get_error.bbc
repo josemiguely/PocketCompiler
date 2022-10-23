@@ -1,0 +1,6 @@
+NAME: Use of get with something else than a tuple
+DESCRIPTION: breaks with runtime error because get is not applied on a tuple
+SRC:
+(get false 1)
+EXPECTED:
+|ORACLE

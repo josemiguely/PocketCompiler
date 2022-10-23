@@ -20,11 +20,9 @@ type 'a expr =
   | Apply of string * 'a expr list * 'a
   | Tuple of 'a expr list * 'a
   | Set of 'a expr  * 'a expr  * 'a expr * 'a
+  | RecordId of string * 'a expr list * 'a (*Es Constructor de Records ya declarados ej: si existe point3d entonces -> (point3d)*)
+  | RecordIdFieldId of string * 'a expr * 'a (*Es para acceder a un elemento en concreto creo algo como: (point3d-x (point3d 1 1 1))*)
   
-
-
-
-
 
 (* C function argument types *)
 type ctype =
@@ -37,14 +35,22 @@ type ctype =
 type fundef =
   | DefFun of string * string list * tag expr (*Name of function, Name of arguments, Expression*)
   | DefSys of string * ctype list * ctype
+  | Record of string list (*a RecordId and multiple fieldIds*)
 
-let fundef_name(f : fundef) : string =
+(* type decl =
+| Record of string list (*a RecordId and multiple fieldIds*)
+| DefFun of string * string list * tag expr (*Name of function, Name of arguments, Expression*)
+| DefSys of string * ctype list * ctype *)
+
+let fundef_name (f : fundef) : string =
   match f with
   | DefFun (n, _, _) -> n
   | DefSys (n, _, _) -> n
+  | _ -> failwith("Not a function")
 
 (* Program including definitions and a body *)
 type prog = fundef list * (tag expr)
+(* type prog = decl list * (tag expr) *)
 
 (** Tagger that tags each node by its position in the AST*)
 let tag (e : 'a expr) : tag expr =
@@ -81,6 +87,11 @@ let tag (e : 'a expr) : tag expr =
     | Apply (name, e, _) -> (
       let (tag_list_expr,next_tag)= (tag_list e (cur+1)) in
       (Apply (name, tag_list_expr ,cur), next_tag))
+    | RecordId (id,expr_list,_) -> 
+      let (tag_list_exp, next_tag) = (tag_list expr_list (cur+1)) in 
+      (RecordId (id,tag_list_exp,cur),next_tag)
+    | RecordIdFieldId (id,expr,_) -> (RecordIdFieldId (id,expr,cur),cur+1)
+    
       (*
       let (tag_e, next_tag) = 
       help (hd e) (cur + 1) in 
@@ -130,7 +141,10 @@ let rec string_of_expr(e : tag expr) : string =
   | If (e1, e2, e3,_) -> sprintf "(if %s %s %s)" (string_of_expr e1) (string_of_expr e2) (string_of_expr e3)
   | Apply (fe, ael,_) -> sprintf "(%s %s)" fe (String.concat " " (List.map string_of_expr ael))
   | Tuple (exprs,_) -> sprintf "(tup %s)" (string_of_exprs exprs) 
-  | Set (e, k, v,_) -> sprintf "(set %s %s %s)" (string_of_expr e) (string_of_expr k) (string_of_expr v) 
+  | Set (e, k, v,_) -> sprintf "(set %s %s %s)" (string_of_expr e) (string_of_expr k) (string_of_expr v)
+  | RecordId (id,expr_list,_)-> sprintf "%s" (string_of_exprs expr_list) (*Checkear esto, probablemente muy malo*)
+  | RecordIdFieldId (id,expr,_) -> sprintf "%s" (string_of_expr expr) (*Checkear esto, probablemente muy malo*)
+
   and string_of_exprs (e: 'a expr list) : string = 
       match e with
       | [] -> ""
@@ -154,12 +168,19 @@ match t with
 
 
 (* Pretty printing function definitions - used by testing framework *)
-let string_of_fundef(d : fundef) : string =
+(* let string_of_fundef(d : fundef) : string =
+  match d with
+  | DefFun (name, arg_ids, body) -> sprintf "(def (%s %s) %s)" name (String.concat " " arg_ids) (string_of_expr body)
+  | DefSys (name, arg_types, ret_type) -> sprintf "(defsys %s %s -> %s)" name (String.concat " " (List.map string_of_ctype arg_types)) (string_of_ctype ret_type) *)
+
+
+let string_of_decl (d : fundef) : string =
   match d with
   | DefFun (name, arg_ids, body) -> sprintf "(def (%s %s) %s)" name (String.concat " " arg_ids) (string_of_expr body)
   | DefSys (name, arg_types, ret_type) -> sprintf "(defsys %s %s -> %s)" name (String.concat " " (List.map string_of_ctype arg_types)) (string_of_ctype ret_type)
+  | _ -> failwith("string of record")
 
 (* Pretty printing a program - used by testing framework *)
 let string_of_prog(p : prog) : string =
-  let fundefs, body = p in
-  String.concat "\n" ((List.map string_of_fundef fundefs) @ [string_of_expr body])
+  let decl, body = p in
+  String.concat "\n" ((List.map string_of_decl decl) @ [string_of_expr body])

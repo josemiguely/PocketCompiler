@@ -375,36 +375,28 @@ let call_function_two_argument (funct: string) : instruction list =
     @ restore_arguments_after_call arg_count 0
 
   | Set (t,k,v,_) -> 
-    (*test_tuple t @ test_k_number_less_than_len_t*)
-     (compile_expr t env funenv arg_count)   
-    (*@ (getIMov (getReg getRAX) (getReg getR11))    Guardo la tupla en Rax  *)   
-    @ test_tuple_instruction  
+     (compile_expr t env funenv arg_count)     
+    @ test_tuple_instruction  (*testeo de que en RAX se tenga una tupla*)
     @ (getISub (getReg getRAX) (getConst 1L))     (*Quitamos la tag tag de tupla*)
     @ (getIMov (getReg getR11) (getReg getRAX) ) (* Dejo el resultado de la tupla en R11*)
     @ (getIPush (getReg getR11))                 (*Pusheo la tupla en R11*)
-
     @ (compile_expr k env funenv arg_count)     (* RAX tiene a k *)
-    @ getIPop (getReg getR11)
-    @ (getISar (getReg getRAX) (getConst 1L) )
-    
+    @ getIPop (getReg getR11) 
+    @ (getISar (getReg getRAX) (getConst 1L) ) 
     @ test_index_out_of_bounds
     @ (getIAdd (getReg getRAX) (getConst 1L)) 
     @ (getIMov (getReg getR10) (getReg getRAX))
     @ (getIPush (getReg getR11)) 
     @ (getIPush (getReg getR10))  (*R11 tiene la tupla , R10 k*)
-
     @ (compile_expr v env funenv arg_count) 
     @ (getIMov (getReg getRDX) (getReg getRAX)) (* guardo el nuevo valor V en RDX  *) 
     @ (getIPop (getReg getR10))               
     @ (getIPop (getReg getR11)) 
-    @ (getIMov (getReg getRAX) (getReg getR11))
-    
+    @ (getIMov (getReg getRAX) (getReg getR11))  
     @ (getIMult (getReg getR10) (getConst 8L))  (* k*8 *)
     @ (getIAdd (getReg getR11) (getReg getR10))   (* tupla sin tag + k*8   *) 
     @ (getIMov (getRegOffset getR11 "+" 0) (getReg getRDX))  (* [tupla + k*8] <- V *)
     @ (getIAdd (getReg getRAX) (getConst 1L) )
-     (*@  (getIMov (getReg getRAX) (getReg getR10)) Guardo en RAX la tupla con el tag *)
-    
      
   | Tuple(expr_list,_) -> 
     (*Nmero de expresiones en la tupla*)
@@ -414,7 +406,7 @@ let call_function_two_argument (funct: string) : instruction list =
     if expr_number==0 then
         getIMov (getReg (getR10)) (getConst (Int64.of_int expr_number))
       @ getIMov (getRegOffset (getR15) "+"  ((8*0))) (getReg getR10) 
-      @ (compile_tuple [] 0 expr_number)
+      @ (add_tuple_to_heap [] 0 expr_number)
     
     else
       let env_slot =(generate_list_env_slot expr_list env) in
@@ -428,7 +420,8 @@ let call_function_two_argument (funct: string) : instruction list =
       compiled_folded 
       @ getIMov (getReg (getR10)) (getConst (Int64.of_int expr_number))
       @ getIMov (getRegOffset (getR15) "+"  ((8*0))) (getReg getR10) (*size de la tupla*)
-      @ (compile_tuple env_slot 0 expr_number) (*Añado el resto de la tupla a HeapPointer y devuelvo Pointer*)
+      @ (add_tuple_to_heap env_slot 0 expr_number) (*Añado el resto de la tupla a HeapPointer y devuelvo Pointer*)
+  | _ -> failwith("Falto implementar los Records :(")
 
     
       
@@ -521,12 +514,12 @@ let call_function_two_argument (funct: string) : instruction list =
           
 
             
-    and compile_tuple (env_slot_list : (env*int) list)(pos : int) (number_of_elements : int) =
+    and add_tuple_to_heap (env_slot_list : (env*int) list)(pos : int) (number_of_elements : int) =
     match env_slot_list with
       | _::t ->let slot = snd (List.nth env_slot_list 0) in
               (getIMov(getReg getRAX) (getRegOffset getRBP "-" (8*slot))) (*Recuperamos el valor del stack y lo dejamos en RAX*)
               @ (getIMov (getRegOffset (getR15) "+"  ((8*(pos+1)))) (getReg getRAX)) (*Lo metemos al Heap pointer*)
-              @ (compile_tuple t (pos+1) number_of_elements)
+              @ (add_tuple_to_heap t (pos+1) number_of_elements)
       | [] ->  getIMov (getReg getRAX) (getReg getR15) @ (*Guardamos el heap pointer en RAX para devolverlo*)
                getIAdd (getReg getRAX) (getConst 1L) @ (*Se taggea la tupla*)
                getIAdd (getReg getR15) (getConst (Int64.of_int (8*(number_of_elements+1)))) (*Bump del header pointer*)   
@@ -549,10 +542,10 @@ let rec var_count(ex: tag expr) : int  =
   |_ -> 1
 
 
-(* Compiles a fun definition/declaration*)
-(* It adds the function arguments to env, fun id and arg_count to funenv, and returns new fun environment*)
-let compile_decl (fdef:fundef) (fun_env : funenv) : (string * funenv) =
-  match fdef with
+(* Compiles a declaration*)
+(* For functions adds the function arguments to env, fun id and arg_count to funenv, and returns new fun environment*)
+let compile_decl (decl: fundef) (fun_env : funenv) : (string * funenv) =
+  match decl with
   | DefFun (id,arg_list,expr) -> 
     let arg_count =  (List.length arg_list) in
     let new_env = add_list arg_list [] ArgKind in
@@ -567,11 +560,11 @@ let compile_decl (fdef:fundef) (fun_env : funenv) : (string * funenv) =
 
 (* Compiles a list of fun definitions/declarations recursively*)
 (* Returns a string of the fun list compilation and the fun environment*)
-let rec compile_list_fundef (f_list:fundef list) (fun_env : funenv) : (string * funenv) =
-  match f_list with
+let rec compile_list_decl (decl_list:fundef list) (fun_env : funenv) : (string * funenv) =
+  match decl_list with
   | h::t -> 
     let (head,new_fenv) = compile_decl h fun_env in
-    let (rest,final_fenv) = compile_list_fundef t new_fenv in
+    let (rest,final_fenv) = compile_list_decl t new_fenv in
     ("\n"^ head ^ rest,final_fenv)
   | [] -> ("",fun_env) 
 
@@ -607,21 +600,11 @@ error_tuple_index_error:
   add R11,0x1
   call tuple_index_error
 "
-(* call print *)
-(* mov RDI,R11 *)
-(* mov RSI,RAX *)
 
 let prologue ="  mov RSP, RBP
   pop RBP
 "
-
-
-  (* "mov R15, RDI
-   add R15, 7
-   mov R11, 0xfffffffffffffff8L
-   and R15, R11
-  " *)
-  
+ 
 (*Heap initializer ensures that provided address is multiple of 8*)
 let heap_initializer =
   asm_to_string ((getIMov (getReg getR15) (getReg getRDI)) @ 
@@ -630,7 +613,7 @@ let heap_initializer =
   (getIAnd (getReg getR15) (getReg getR11)))
   
 
-let prelude(vars: int): string =
+let prelude (vars: int): string =
   sprintf "section .text
 global our_code_starts_here\n" ^ 
 (extern_functions extern_list) ^
@@ -642,8 +625,8 @@ our_code_starts_here:
   
 (*Compiles whole program*)
 let compile_prog (p:prog)  : string =
-  let flist, e = p in
-  let (functions,funenv) = compile_list_fundef flist [] in
+  let decl_list, e = p in
+  let (functions,funenv) = compile_list_decl decl_list [] in
   let instrs = compile_expr (tag e) [] funenv 0 in
   let vars = 16* 16 * (var_count e) in
 

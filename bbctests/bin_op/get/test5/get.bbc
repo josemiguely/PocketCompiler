@@ -1,0 +1,6 @@
+NAME: multiple gets of a tuple
+DESCRIPTION: evaluates multiple get of a tuple
+SRC:
+(get (get (get (tup (tup (tup -23))) 0) 0) 0)
+EXPECTED:
+|ORACLE

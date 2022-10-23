@@ -1,0 +1,8 @@
+NAME: a multiple use of set 
+DESCRIPTION: multiple sets of a tuple
+SRC:
+(let (t tup true false true)
+ (set (set (set t 1 true) 0 false) 2 -4)
+)
+EXPECTED:
+|ORACLE
