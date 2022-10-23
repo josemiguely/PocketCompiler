@@ -142,8 +142,8 @@ let rec string_of_expr(e : tag expr) : string =
   | Apply (fe, ael,_) -> sprintf "(%s %s)" fe (String.concat " " (List.map string_of_expr ael))
   | Tuple (exprs,_) -> sprintf "(tup %s)" (string_of_exprs exprs) 
   | Set (e, k, v,_) -> sprintf "(set %s %s %s)" (string_of_expr e) (string_of_expr k) (string_of_expr v)
-  | RecordId (id,expr_list,_)-> sprintf "%s" (string_of_exprs expr_list) (*Checkear esto, probablemente muy malo*)
-  | RecordIdFieldId (id,expr,_) -> sprintf "%s" (string_of_expr expr) (*Checkear esto, probablemente muy malo*)
+  | RecordId (id,expr_list,_)-> sprintf "(%s %s)" (id) (string_of_exprs expr_list) (*Checkear esto, probablemente muy malo*)
+  | RecordIdFieldId (id,expr,_) -> sprintf "(%s %s)" (id) (string_of_expr expr) (*Checkear esto, probablemente muy malo*)
 
   and string_of_exprs (e: 'a expr list) : string = 
       match e with
