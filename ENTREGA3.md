@@ -53,7 +53,7 @@ Se mantienen los test de la entrega anterior: Se agregan test para el nuevo tipo
 ### *get*
 - Se testea extraer un valor simple de una tupla de un elemento 
 - Se testea extraer un valor simple de una tupla con mas de un elemento
-- Se testea extraer un valor no mumerico de una tupla
+- Se testea extraer un valor no numérico de una tupla
 - Se testea extraer una tupla anidada de una tupla 
 
 ### *Errores*
