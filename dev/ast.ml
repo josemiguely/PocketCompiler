@@ -22,6 +22,9 @@ type 'a expr =
   | Set of 'a expr  * 'a expr  * 'a expr * 'a
   | RecordId of string * 'a expr list * 'a (*Es Constructor de Records ya declarados ej: si existe point3d entonces -> (point3d)*)
   | RecordIdFieldId of string * 'a expr * 'a (*Es para acceder a un elemento en concreto creo algo como: (point3d-x (point3d 1 1 1))*)
+  | Lambda of string list * 'a expr * 'a
+  | LamApply of 'a expr * 'a expr list * 'a
+  | LetRec of (string * string list * 'a expr) list * 'a expr * 'a
   
 
 (* C function argument types *)
@@ -91,6 +94,9 @@ let tag (e : 'a expr) : tag expr =
       let (tag_list_exp, next_tag) = (tag_list expr_list (cur+1)) in 
       (RecordId (id,tag_list_exp,cur),next_tag)
     | RecordIdFieldId (id,expr,_) -> (RecordIdFieldId (id,expr,cur),cur+1)
+    | Lambda(_,_,_) -> failwith("agregar")
+    | LamApply(_,_,_) -> failwith("agregar")
+    | LetRec(_,_,_) -> failwith("agregar")
     
       (*
       let (tag_e, next_tag) = 
@@ -144,6 +150,13 @@ let rec string_of_expr(e : tag expr) : string =
   | Set (e, k, v,_) -> sprintf "(set %s %s %s)" (string_of_expr e) (string_of_expr k) (string_of_expr v)
   | RecordId (id,expr_list,_)-> sprintf "(%s %s)" (id) (string_of_exprs expr_list) (*Checkear esto, probablemente muy malo*)
   | RecordIdFieldId (id,expr,_) -> sprintf "(%s %s)" (id) (string_of_expr expr) (*Checkear esto, probablemente muy malo*)
+  | Lambda (params, body,_) -> sprintf "(lambda (%s) %s)" (String.concat " " params) (string_of_expr body)
+  | LamApply (fe, ael,_) -> sprintf "(%s %s)" (string_of_expr fe) (String.concat " " (List.map string_of_expr ael))
+  | LetRec (recs, body,_) -> sprintf "(letrec (%s) %s)" (String.concat " " (List.map (
+      fun (name, params, body) -> 
+        sprintf "(%s %s)" name (string_of_expr (Lambda (params, body,-1)))
+        ) recs
+      )) (string_of_expr body)
 
   and string_of_exprs (e: 'a expr list) : string = 
       match e with

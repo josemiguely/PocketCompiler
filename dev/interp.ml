@@ -10,6 +10,7 @@ type value =
   | NumV of int64
   | BoolV of bool
   | TupleV of value ref list
+  | ClosureV of int * (value list -> value)
 
 (* Pretty printing *)
 let rec string_of_val(v : value) : string =
@@ -22,6 +23,7 @@ match v with
             | [] -> ""
             | e::l -> " " ^ string_of_val !e ^ string_of_val_list l) in 
         "(tup"^(string_of_val_list vals)^")"
+| ClosureV (arity, _) -> sprintf "<clos:%d>" arity
 
 (* Lexical Environment *)
 type env = (string * value) list
@@ -84,7 +86,6 @@ let liftIIB : (int64 -> int64 -> bool) -> value -> value -> value =
 let raise_out_of_bounds_error (index : int) (tuple : value) : 'a =
   raise (RTError (sprintf "Index out of bounds: Tried to access index %d of %s"
                           index (string_of_val tuple)))
-  
 let get_ref : 'a list -> int64 -> 'a =
   fun ts n ->
     let (index, tup_len) = ((Int64.to_int n), List.length ts) in
@@ -94,20 +95,20 @@ let get_ref : 'a list -> int64 -> 'a =
 
 let get_elem : value -> value -> value =
     fun v1 v2 ->
-        match v1, v2 with
+      match v1, v2 with
       | TupleV ts, NumV n -> !(get_ref ts n)
       | TupleV _, _ -> raise_type_error "integer" v2
       | _ -> raise_type_error "tuple" v1
-
+  
 let set_elem : value -> value -> value -> value = 
     fun v1 v2 v3 -> 
-        match v1,v2 with
+      match v1,v2 with
       | TupleV ts, NumV n ->
         let elem = get_ref ts n in
         elem := v3 ; TupleV ts
       | TupleV _, _ -> raise_type_error "integer" v2
       | _ -> raise_type_error "tuple" v1
-
+  
 (* Sys functions *)
 let defs_prelude : fundef list = [
   DefSys ("print", [CAny], CAny) ;
@@ -118,15 +119,15 @@ let defs_prelude : fundef list = [
 
 (* check that the value is of the given type, return the value if ok *)
 let rec check_type (t : ctype) (v : value) : value =
-    match v, t with
-    | NumV _, CInt | BoolV _, CBool | _, CAny -> v
-    | TupleV vals, CTuple types -> 
-            let _ = List.map2 (fun x y -> (check_type x !y)) types vals in
-            v
-    | _, CInt -> raise_type_error "integer" v
-    | _, CBool -> raise_type_error "boolean" v
-    | _, CTuple _ -> raise_type_error "tuple" v
-            
+  match v, t with
+  | NumV _, CInt | BoolV _, CBool | _, CAny -> v
+  | TupleV vals, CTuple types -> 
+          let _ = List.map2 (fun x y -> (check_type x !y)) types vals in
+          v
+  | _, CInt -> raise_type_error "integer" v
+  | _, CBool -> raise_type_error "boolean" v
+  | _, CTuple _ -> raise_type_error "tuple" v            
+
 (* Arity checks *)
 let raise_arity_mismatch (fun_id : string) (expected : int) (received : int) : 'a =
   raise (CTError (sprintf "Arity mismatch: %s expected %d arguments but got %d" fun_id expected received))
@@ -142,8 +143,8 @@ let interp_sys name vals =
                 | v :: [] -> Printf.printf "> %s\n" (string_of_val v) ; v
                 | _ -> raise_arity_mismatch name 1 arg_count)
   | "max" -> (match vals with
-                | NumV n1 :: NumV n2 :: [] -> NumV (if n1 >= n2 then n1 else n2)
-                | _ -> raise_arity_mismatch name 2 arg_count)
+              | NumV n1 :: NumV n2 :: [] -> NumV (if n1 >= n2 then n1 else n2)
+              | _ -> raise_arity_mismatch name 2 arg_count)
   | "xor" -> (match vals with
               | BoolV b1 :: BoolV b2 :: [] -> BoolV (b1 <> b2)
               | _ -> raise_arity_mismatch name 2 arg_count)
@@ -167,7 +168,8 @@ let rec interp expr env fenv =
   | Prim2 (op, e1, e2,_) -> 
     (match op with
     | Add -> liftIII ( Int64.add )  (interp e1 env fenv) (interp e2 env fenv)
-    | And -> liftBBB ( && )  (interp e1 env fenv) (interp e2 env fenv)
+    | And -> if bool_of_value (interp e1 env fenv) then
+      BoolV (bool_of_value (interp e2 env fenv)) else BoolV false
     | Lte -> liftIIB ( <= ) (interp e1 env fenv) (interp e2 env fenv)
     | Lt -> liftIIB ( < ) (interp e1 env fenv) (interp e2 env fenv)
     | Sub -> liftIII (Int64.sub) (interp e1 env fenv) (interp e2 env fenv)
@@ -175,19 +177,6 @@ let rec interp expr env fenv =
     | Div -> liftIII (Int64.div) (interp e1 env fenv) (interp e2 env fenv)
     | Get -> get_elem (interp e1 env fenv) (interp e2 env fenv)) 
   | Let (x, e , b,_) -> interp b (extend_env [x] [(interp e env fenv)] env) fenv
-  (* | If (e1, e2, e3,_) -> 
-    (match interp e1 env fenv with
-    | BoolV b -> interp (if b then e2 else e3) env fenv
-    | e -> raise (RTError (Printf.sprintf "Expected boolean, but got %s" (string_of_val e))) ) *) (*OG*)
-  (* | Apply (name, args,_) -> 
-      let vals = List.map (fun e -> interp e env fenv) args in
-      (match lookup_fenv name fenv with
-      | DefFun (_, params, body) -> 
-        interp body (extend_env params vals env) fenv
-      | DefSys (_, arg_types, ret_type) ->
-        check_type ret_type @@ interp_sys name (List.map2 check_type arg_types vals)) *) (*OG*)
-    (* | And -> if bool_of_value (interp e1 env fenv) then
-      BoolV (bool_of_value (interp e2 env fenv)) else BoolV false *)
   | If (e1, e2, e3,_) ->
     let b = bool_of_value (interp e1 env fenv) in
     interp (if b then e2 else e3) env fenv
@@ -200,14 +189,45 @@ let rec interp expr env fenv =
       interp body (extend_env params vals env) fenv
     | DefSys (_, arg_types, ret_type) ->
       check_arity name (List.length arg_types) received_count ;
-      check_type ret_type @@ interp_sys name (List.map2 check_type arg_types vals))
+      check_type ret_type @@ interp_sys name (List.map2 check_type arg_types vals)
+    | _ -> failwith ("FALTA RECORD"))
   | Tuple (exprs,_) -> 
           TupleV (List.map (fun e -> (ref (interp e env fenv))) exprs)
   | Set (e,k,v,_) ->
           let t = (interp e env fenv) in
           let i = (interp k env fenv) in
           set_elem t i (interp v env fenv)
-  | _ -> failwith("Falta recordId y recordId-fieldId")
+  | Lambda (params, body,_) -> ClosureV (List.length params,
+    (fun vals -> 
+      let env = extend_env params vals env in
+      interp body env fenv
+      )
+    )
+  | LamApply (fun_exp, args,_) ->
+    let fun_val = interp fun_exp env fenv in
+    (
+      match fun_val with
+      | ClosureV (arity, closure) -> 
+        let vals = List.map (fun e -> interp e env fenv) args in
+        let received_count = List.length vals in
+        check_arity "closure" arity received_count ;
+        closure vals
+      | _ -> raise_type_error "closure" fun_val
+    )
+  | LetRec (recs, body,_) -> 
+    let env_box = ref [] in
+    let names_n_closures = List.map (
+      fun (name, params, body) ->
+        name, ClosureV (List.length params, (fun vals -> 
+          let env = extend_env params vals !env_box in
+          interp body env fenv
+          )
+        )
+    ) recs in
+    let names, closures = List.split names_n_closures in
+    let env = extend_env names closures env in
+    env_box := env ;
+    interp body env fenv
 
 let interp_prog prog env =
   let defs, expr = prog in
@@ -215,4 +235,4 @@ let interp_prog prog env =
   interp expr env fenv
 
 let run (p : string) : value =
-  interp_prog (parse_prog (sexp_from_string p)) []
+    interp_prog (parse_prog (sexp_from_string p)) []
