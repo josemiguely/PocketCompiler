@@ -20,7 +20,7 @@ type arg =
 | Const of int64 (* explicit numeric constants *)
 | Reg of reg (* any named register*)
 | RegOffset of reg * string * int (*RegOffset(reg,i) represents adress [reg +- 8*i]*)
-| RegOffsetRR of reg * string * reg
+| ILabelArg of string
 
 type instruction =
   | IMov of arg * arg (* Move the value of the right-side arg into the left-arg*)
@@ -29,6 +29,7 @@ type instruction =
   | IMult of arg * arg (*Multiply the left-side arg by the value of the right-side*)
   | IDiv of arg
   | IAnd of arg * arg
+  | IOr of arg * arg
   | ICmp of arg * arg (*Compares both args and sets flags*)
   | IJe of string (*Moves execution flow to string label if equal in cmp instruction*)
   | IJl of string (*Moves execution flow to string label if less than in cmp instruction*)
@@ -46,6 +47,7 @@ type instruction =
   | IShl of arg * arg (* << *)
   | ISar of arg * arg   (* >> *)
   | ICqo
+  | ILine (*Returnes a \n*)
   | IRet (*Return*)
 
 
@@ -69,7 +71,8 @@ let pp_arg arg : string =
   | Const n ->  sprintf "%#Lx" n
   | Reg r -> pp_reg r
   | RegOffset (reg,operation,slot) -> sprintf "[%s %s %s]" (pp_reg reg) (operation) (string_of_int slot)
-  | RegOffsetRR (reg,operation,reg2) -> sprintf "[%s %s %s]" (pp_reg reg) (operation) (pp_reg reg2)
+  | ILabelArg (id) -> sprintf "%s" (id)
+  (* | RegOffsetRR (reg,operation,reg2) -> sprintf "[%s %s %s]" (pp_reg reg) (operation) (pp_reg reg2) *)
 
 
 (** Transforms ASM instruction list to string*)
@@ -81,6 +84,7 @@ let rec asm_to_string (asm : instruction list) : string =
   | [ISub (arg1,arg2)] -> sprintf "  sub %s, %s\n" (pp_arg arg1) (pp_arg arg2)
   | [ICmp (arg1,arg2)] -> sprintf "  cmp %s, %s\n" (pp_arg arg1) (pp_arg arg2)
   | [IAnd (arg1,arg2)] -> sprintf "  and %s, %s\n" (pp_arg arg1) (pp_arg arg2)
+  | [IOr (arg1,arg2)] -> sprintf "  or %s, %s\n" (pp_arg arg1) (pp_arg arg2)
   | [IMult (arg1,arg2)] -> sprintf "  imul %s, %s\n" (pp_arg arg1) (pp_arg arg2)
   | [IDiv (arg1)] -> sprintf "  idiv %s\n" (pp_arg arg1)
   | [IXor (arg1,arg2)] -> sprintf "  xor %s, %s\n" (pp_arg arg1) (pp_arg arg2)
@@ -98,6 +102,7 @@ let rec asm_to_string (asm : instruction list) : string =
   | [IPop (arg1)] -> sprintf "  pop %s\n" (pp_arg arg1)
   | [IRet] -> sprintf "  ret\n"
   | [ICqo] -> sprintf "  cqo\n"
+  | [ILine] -> sprintf "  \n"
   | [IShl (arg1,arg2)] -> sprintf "  shl %s, %s\n" (pp_arg arg1) (pp_arg arg2)
   | [ISar (arg1,arg2)] -> sprintf "  sar %s, %s\n" (pp_arg arg1) (pp_arg arg2)
   | h :: t -> (asm_to_string [h]) ^ (asm_to_string t)

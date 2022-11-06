@@ -3,7 +3,7 @@ open Printf
 
 (* primitive operators *)
 type prim1 = Add1 | Sub1 | Not | Print
-type prim2 = Add | And | Lte | Lt | Mult | Div | Sub | Get
+type prim2 = Add | And | Lte | Lt | Mult | Div | Sub | Get | Or
 
 
 type tag = int
@@ -23,7 +23,7 @@ type 'a expr =
   | RecordId of string * 'a expr list * 'a (*Es Constructor de Records ya declarados ej: si existe point3d entonces -> (point3d)*)
   | RecordIdFieldId of string * 'a expr * 'a (*Es para acceder a un elemento en concreto creo algo como: (point3d-x (point3d 1 1 1))*)
   | Lambda of string list * 'a expr * 'a
-  | LamApply of 'a expr * 'a expr list * 'a
+  | LamApply of 'a expr * 'a expr list * 'a (* Lamba expr is applied to list of arguments*)
   | LetRec of (string * string list * 'a expr) list * 'a expr * 'a
   
 
@@ -94,7 +94,9 @@ let tag (e : 'a expr) : tag expr =
       let (tag_list_exp, next_tag) = (tag_list expr_list (cur+1)) in 
       (RecordId (id,tag_list_exp,cur),next_tag)
     | RecordIdFieldId (id,expr,_) -> (RecordIdFieldId (id,expr,cur),cur+1)
-    | Lambda(_,_,_) -> failwith("agregar")
+    | Lambda(id_list,body,_) -> 
+      let (tag_body,next_tag_1) = help body (cur+1) in
+      (Lambda(id_list,tag_body,cur),next_tag_1)
     | LamApply(_,_,_) -> failwith("agregar")
     | LetRec(_,_,_) -> failwith("agregar")
     
@@ -137,6 +139,7 @@ let rec string_of_expr(e : tag expr) : string =
     (match op with 
     | Add -> "+"
     | And -> "and"
+    | Or -> "or"
     | Lte -> "<="
     | Lt -> "<"
     | Sub -> "-"

@@ -73,9 +73,7 @@ let getRegOffset (reg:reg) (op : string) (offset: int) : arg =
 (** Recieves a register that with a operation will offset an amount. Returns [[RegOffset(reg,op,offset)]]*)
   RegOffset(reg,op,offset)
 
-  let getRegOffsetRR (reg:reg) (op : string) (reg2: reg) : arg =
-    (** Recieves a register that with a operation will offset a reg amount. Returns [[RegOffset(reg,op,reg)]]*)
-    RegOffsetRR(reg,op,reg2)
+
 
 (*Pure functions for instructions*)
 
@@ -159,6 +157,15 @@ let getICqo = [ICqo]
 
 let getIRet = [IRet]
 
+
+let getILine = [ILine]
+
+(*Revisar esto*)
+let getILabelArg (id:string) = ILabelArg (id)
+
+
+let getOr (arg1: arg) (arg2: arg) = 
+  [IOr (arg1,arg2)]
 
 let test_number_instruction = [ITest (Reg(RAX),Const(test_number))] @ [IJnz("error_not_number")]
 
@@ -284,7 +291,26 @@ let call_function_one_argument (funct: string) : instruction list =
 
 let call_function_two_argument (funct: string) : instruction list = 
   [IPush(Reg(RSI));IPush(Reg(RDI))] @[IMov(Reg(RDI),Reg(RAX))] @ [ICall(funct)] @ [IPop (Reg(RDI));IPop (Reg(RSI))] 
-  
+
+
+(*Adds a list of variables to env*)
+let rec add_list (list_variables : string list) (env : env) (kind : kind) =
+  match list_variables with
+  | h::t -> let (new_env,_) = add h env kind in 
+               add_list t new_env kind
+  | [] -> env
+
+
+(* Counts number of local variables in a expression*)
+let rec var_count(ex: tag expr) : int  =
+  match ex with 
+  | Prim1(_,e,_) -> 1 + var_count e
+  | Prim2(_,e1,e2,_) -> 1 + max (var_count e1) (var_count e2)
+  | Let(_ ,e,body,_) -> 1 + max (var_count e) (var_count body)
+  | If(cond,tbranch,fbranch,_)-> 1 + max (var_count cond) (max (var_count tbranch) (var_count fbranch)) (* Arreglar pq cond (max del max)también puede*)
+  | Apply (_, e, _) -> 1 + (List.fold_left max 0 (List.map var_count e)) (*agregar max de la lista antes del fold*)
+  |_ -> 1
+
   (** Compile AST expressions *)
   let rec compile_expr (e : tag expr) (env : env) (funenv : funenv) (arg_count : int)  : instruction list =
     match e with
@@ -305,12 +331,52 @@ let call_function_two_argument (funct: string) : instruction list =
                 @ (call_function_one_argument "print"))
     | Let (x,e,b,_) -> 
       let (env',slot) = add x env LocalKind in
-      (*Compile the binding, and get the result into RAX*)
-      (compile_expr e env funenv arg_count) 
-      (* Copy the result in RAX into the appropriate stack slot*)
-      @ [IMov (RegOffset(RBP,"-",8*slot),Reg(RAX))]
-      (* Compile the body, given that x is in the correct slot when it's needed*)
-      @ (compile_expr b env' funenv arg_count)
+      (match e with
+      | Lambda (id_list,_,_) -> 
+        let id_count =  (List.length id_list) in
+        getIJmp(x^"_end")
+        @ getILine
+        @ getILabel(x)
+        @ (compile_expr e env funenv arg_count)
+        (*Si es lambda entonces agregar getILabel("x")*)
+        (* Copy the result in RAX into the appropriate stack slot*)
+        @ getILabel(x^"_end")
+        @ getILine
+        
+        (*Crear tupla*)
+        (* mov RAX, R15   ;; allocate a function tuple
+        or RAX, 0x5    ;; tag it as a function tuple
+        mov [R15+0], 1 ;; set the arity of the function
+        mov [R15+8], incr
+        add R15, 8 *)
+
+        @ getIMov (getReg getRAX) (getReg getR15)
+        @ getOr (getReg getRAX) (getConst 5L)
+        @ getIMov (getRegOffset(getR15) "+" 0) (getConst (Int64.of_int id_count))
+        @ getIMov (getRegOffset(getR15) "+" 8) (getILabelArg x)
+        (*Falta agregar cantidad de variable libres, y abajo en vez de 8 es 16*)
+        @ getIAdd (getReg (getR15)) (getConst 8L)
+
+
+
+
+        
+        @ [IMov (RegOffset(RBP,"-",8*slot),Reg(RAX))]
+        
+
+        (* Compile the body, given that x is in the correct slot when it's needed*)
+        @ (compile_expr b env' funenv arg_count)
+      
+        | _ ->
+        (*Compile the binding, and get the result into RAX*)
+        (compile_expr e env funenv arg_count)
+        (*Si es lambda entonces agregar getILabel("x")*)
+        (* Copy the result in RAX into the appropriate stack slot*)
+        @ [IMov (RegOffset(RBP,"-",8*slot),Reg(RAX))]
+        (* Compile the body, given that x is in the correct slot when it's needed*)
+        @ (compile_expr b env' funenv arg_count)
+        )
+      
     | Id (x,_) -> let (slot,kind) = (lookup x env) in
     (match kind with
       | LocalKind -> [IMov (Reg(RAX),RegOffset(RBP,"-",8*slot))]
@@ -342,6 +408,7 @@ let call_function_two_argument (funct: string) : instruction list =
         | Div -> scaffold 
                 @ eDiv(slot2) 
         | And -> scaffold
+        | Or -> scaffold
         | Lt -> (
           let less_label = sprintf "less_%d" tag in
           scaffold 
@@ -421,7 +488,18 @@ let call_function_two_argument (funct: string) : instruction list =
       @ getIMov (getReg (getR10)) (getConst (Int64.of_int expr_number))
       @ getIMov (getRegOffset (getR15) "+"  ((8*0))) (getReg getR10) (*size de la tupla*)
       @ (add_tuple_to_heap env_slot 0 expr_number) (*Añado el resto de la tupla a HeapPointer y devuelvo Pointer*)
-  | _ -> failwith("Falto implementar los Records :(")
+  
+  | Lambda (id_list,body,_) -> 
+      let arg_count =  (List.length id_list) in
+      let new_env = add_list id_list [] ArgKind in
+      (* let new_fun_env = add_fun id arg_count fun_env in *)
+      let count_of_var = Int64.of_int (16* 16 * (var_count body)) in
+      let decl = [IPush(Reg(RBP));IMov(Reg(RBP),Reg(RSP));ISub(Reg(RSP),Const(count_of_var))] 
+                @ (compile_expr (tag body) new_env funenv arg_count) @ [IMov(Reg(RSP),Reg(RBP))] 
+                @ [IPop (Reg(RBP))] @ [IRet] in
+                decl
+  | LamApply (lambda_expr,arg_list,_) -> failwith("LambdaApply")
+  | _ -> failwith("Falta implementar LetRec y los Records :(")
 
     
       
@@ -446,7 +524,23 @@ let call_function_two_argument (funct: string) : instruction list =
        @ [IAnd (Reg(RAX),RegOffset(RBP,"-",8*slot2))]
        @ [IJmp (done_label)]
        @ [ILabel(done_label)]
-
+    | Or -> 
+        let done_label = sprintf "done_%d" tag in
+        (compile_expr e1 env funenv arg_count) @ 
+        test_boolean_instruction @
+        [
+          IMov(Reg(R10),Const(const_false));
+          ICmp(Reg(RAX),Reg(R10));
+          IJe(done_label);
+         ]
+         @ [IMov (RegOffset(RBP,"-",8*slot1),Reg(RAX))]
+         @ (compile_expr e2 env funenv arg_count)
+         @ test_boolean_instruction
+         @ [IMov (RegOffset(RBP,"-",8*slot2),Reg(RAX))]
+         @ [IMov (Reg(RAX),RegOffset(RBP,"-",8*slot1))]
+         @ [IAnd (Reg(RAX),RegOffset(RBP,"-",8*slot2))]
+         @ [IJmp (done_label)]
+         @ [ILabel(done_label)]
     | Div ->  
       (compile_expr e1 env funenv arg_count)
       @ test_number_instruction
@@ -525,21 +619,13 @@ let call_function_two_argument (funct: string) : instruction list =
                getIAdd (getReg getR15) (getConst (Int64.of_int (8*(number_of_elements+1)))) (*Bump del header pointer*)   
                
 (*Adds a list of variables to env*)
-let rec add_list (list_variables : string list) (env : env) (kind : kind) =
+(* let rec add_list (list_variables : string list) (env : env) (kind : kind) =
    match list_variables with
    | h::t -> let (new_env,_) = add h env kind in 
                 add_list t new_env kind
-   | [] -> env
+   | [] -> env *)
 
-(* Counts number of local variables in a expression*)
-let rec var_count(ex: tag expr) : int  =
-  match ex with 
-  | Prim1(_,e,_) -> 1 + var_count e
-  | Prim2(_,e1,e2,_) -> 1 + max (var_count e1) (var_count e2)
-  | Let(_ ,e,body,_) -> 1 + max (var_count e) (var_count body)
-  | If(cond,tbranch,fbranch,_)-> 1 + max (var_count cond) (max (var_count tbranch) (var_count fbranch)) (* Arreglar pq cond (max del max)también puede*)
-  | Apply (_, e, _) -> 1 + (List.fold_left max 0 (List.map var_count e)) (*agregar max de la lista antes del fold*)
-  |_ -> 1
+
 
 
 (* Compiles a declaration*)
@@ -556,6 +642,21 @@ let compile_decl (decl: fundef) (fun_env : funenv) : (string * funenv) =
               @ [IPop (Reg(RBP))] @ [IRet]) in
     (decl,new_fun_env)
   | _ -> failwith("Error: DefFun constructor expected in compilation of functions")
+
+
+  (* | Lambda (id_list,body,_) -> failwith("Lambda") *)
+(* let compile_lambda (id_list: string list) (expr : tag expr) : (string * funenv) =
+  let arg_count =  (List.length id_list) in
+  let new_env = add_list id_list [] ArgKind in
+  (* let new_fun_env = add_fun id arg_count fun_env in *)
+  let count_of_var = Int64.of_int (16* 16 * (var_count expr)) in
+  let decl = [ILabel(id);IPush(Reg(RBP));IMov(Reg(RBP),Reg(RSP));ISub(Reg(RSP),Const(count_of_var))] 
+            @ (compile_expr (tag expr) new_env new_fun_env arg_count) @ [IMov(Reg(RSP),Reg(RBP))] 
+            @ [IPop (Reg(RBP))] @ [IRet] in
+  (decl,new_fun_env)
+| _ -> failwith("Error: DefFun constructor expected in compilation of functions") *)
+ 
+    
   
 
 (* Compiles a list of fun definitions/declarations recursively*)
