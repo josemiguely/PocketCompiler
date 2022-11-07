@@ -311,6 +311,12 @@ let rec var_count(ex: tag expr) : int  =
   | Apply (_, e, _) -> 1 + (List.fold_left max 0 (List.map var_count e)) (*agregar max de la lista antes del fold*)
   |_ -> 1
 
+
+let freeVars (expr : tag expr) (vars_in_scope : string list) : int =
+  failwith("Realizar")
+
+
+
   (** Compile AST expressions *)
   let rec compile_expr (e : tag expr) (env : env) (funenv : funenv) (arg_count : int)  : instruction list =
     match e with
@@ -350,12 +356,12 @@ let rec var_count(ex: tag expr) : int  =
         mov [R15+8], incr
         add R15, 8 *)
 
-        @ getIMov (getReg getRAX) (getReg getR15)
+        (* @ getIMov (getReg getRAX) (getReg getR15)
         @ getOr (getReg getRAX) (getConst 5L)
         @ getIMov (getRegOffset(getR15) "+" 0) (getConst (Int64.of_int id_count))
         @ getIMov (getRegOffset(getR15) "+" 8) (getILabelArg x)
         (*Falta agregar cantidad de variable libres, y abajo en vez de 8 es 16*)
-        @ getIAdd (getReg (getR15)) (getConst 8L)
+        @ getIAdd (getReg (getR15)) (getConst 8L) *)
 
 
 
@@ -490,15 +496,24 @@ let rec var_count(ex: tag expr) : int  =
       @ (add_tuple_to_heap env_slot 0 expr_number) (*Añado el resto de la tupla a HeapPointer y devuelvo Pointer*)
   
   | Lambda (id_list,body,_) -> 
-      let arg_count =  (List.length id_list) in
+      let id_count =  (List.length id_list) in
       let new_env = add_list id_list [] ArgKind in
       (* let new_fun_env = add_fun id arg_count fun_env in *)
       let count_of_var = Int64.of_int (16* 16 * (var_count body)) in
       let decl = [IPush(Reg(RBP));IMov(Reg(RBP),Reg(RSP));ISub(Reg(RSP),Const(count_of_var))] 
-                @ (compile_expr (tag body) new_env funenv arg_count) @ [IMov(Reg(RSP),Reg(RBP))] 
+                @ (compile_expr (tag body) new_env funenv id_count) @ [IMov(Reg(RSP),Reg(RBP))] 
                 @ [IPop (Reg(RBP))] @ [IRet] in
-                decl
-  | LamApply (lambda_expr,arg_list,_) -> failwith("LambdaApply")
+                decl 
+                @ getIMov (getReg getRAX) (getReg getR15)
+                @ getOr (getReg getRAX) (getConst 5L)
+                @ getIMov (getRegOffset(getR15) "+" 0) (getConst (Int64.of_int id_count))
+                (* @ getIMov (getRegOffset(getR15) "+" 8) (getILabelArg x) *)
+                (*Falta agregar cantidad de variable libres, y abajo en vez de 8 es 16*)
+                @ getIAdd (getReg (getR15)) (getConst 8L)
+
+  | LamApply (lambda_expr,arg_list,_) -> 
+    (compile_expr lambda_expr env funenv arg_count) (*Compilo el lambda*)
+
   | _ -> failwith("Falta implementar LetRec y los Records :(")
 
     
@@ -644,17 +659,6 @@ let compile_decl (decl: fundef) (fun_env : funenv) : (string * funenv) =
   | _ -> failwith("Error: DefFun constructor expected in compilation of functions")
 
 
-  (* | Lambda (id_list,body,_) -> failwith("Lambda") *)
-(* let compile_lambda (id_list: string list) (expr : tag expr) : (string * funenv) =
-  let arg_count =  (List.length id_list) in
-  let new_env = add_list id_list [] ArgKind in
-  (* let new_fun_env = add_fun id arg_count fun_env in *)
-  let count_of_var = Int64.of_int (16* 16 * (var_count expr)) in
-  let decl = [ILabel(id);IPush(Reg(RBP));IMov(Reg(RBP),Reg(RSP));ISub(Reg(RSP),Const(count_of_var))] 
-            @ (compile_expr (tag expr) new_env new_fun_env arg_count) @ [IMov(Reg(RSP),Reg(RBP))] 
-            @ [IPop (Reg(RBP))] @ [IRet] in
-  (decl,new_fun_env)
-| _ -> failwith("Error: DefFun constructor expected in compilation of functions") *)
  
     
   
