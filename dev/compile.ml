@@ -332,7 +332,7 @@ let rec freeVars (expr : tag expr) (vars_in_scope : string list) (free_vars_list
   | Lambda (_,body,_) -> freeVars body vars_in_scope free_vars_list
   | LamApply (lambda_expr,arg_list,_) -> let free_vars_lambda =(freeVars lambda_expr vars_in_scope free_vars_list) in 
     failwith("LamApply freevars")
-  | _ -> failwith("Te odio abuelo")
+  | _ -> free_vars_list (*Solamente deberia aplicar a Num y Bools*)
 
   (* type env = (string * int * kind) list *)
   (*Devuelve los primeros amount slots de un env*)
@@ -374,6 +374,20 @@ let rec freeVars (expr : tag expr) (vars_in_scope : string list) (free_vars_list
     
     (* getIMov (getReg getRAX) (getRegOffset getR11 "+" 24) *)
 
+(*Returns value of a id symbol*)
+let find_id_value (x : string) (env : env) : instruction list = 
+  let (slot,kind) = (lookup x env) in
+    (match kind with
+      | LocalKind -> [IMov (Reg(RAX),RegOffset(RBP,"-",8*slot))]
+      | ArgKind  ->(
+          if slot<=6 then [IMov (Reg(RAX),List.nth register_arguments (slot-1))]
+          else [IMov (Reg(RAX),RegOffset(RBP,"+",8*(slot-7+2)))]))
+
+let rec add_free_vars_to_closure (free_vars_list : string list) (env : env) (accum : int) : instruction list =
+  match free_vars_list with
+    | h::t -> (find_id_value h env) @ (getIMov (getRegOffset getR15 "+" accum) (getReg getRAX)) @ add_free_vars_to_closure t env (accum+8)
+    | [] -> []
+  
 
 
 
@@ -398,38 +412,6 @@ let rec freeVars (expr : tag expr) (vars_in_scope : string list) (free_vars_list
     | Let (x,e,b,_) -> 
       let (env',slot) = add x env LocalKind in
       (match e with
-      (* | Lambda (id_list,_,_) -> 
-        let id_count =  (List.length id_list) in
-        getIJmp(x^"_end")
-        @ getILine
-        @ getILabel(x)
-        @ (compile_expr e env funenv arg_count)
-        (*Si es lambda entonces agregar getILabel("x")*)
-        (* Copy the result in RAX into the appropriate stack slot*)
-        @ getILabel(x^"_end")
-        @ getILine *)
-        
-        (*Crear tupla*)
-        (* mov RAX, R15   ;; allocate a function tuple
-        or RAX, 0x5    ;; tag it as a function tuple
-        mov [R15+0], 1 ;; set the arity of the function
-        mov [R15+8], incr
-        add R15, 8 *)
-
-        (* @ getIMov (getReg getRAX) (getReg getR15)
-        @ getOr (getReg getRAX) (getConst 5L)
-        @ getIMov (getRegOffset(getR15) "+" 0) (getConst (Int64.of_int id_count))
-        @ getIMov (getRegOffset(getR15) "+" 8) (getILabelArg x)
-        (*Falta agregar cantidad de variable libres, y abajo en vez de 8 es 16*)
-        @ getIAdd (getReg (getR15)) (getConst 8L) *)
-
-        
-        (* @ [IMov (RegOffset(RBP,"-",8*slot),Reg(RAX))]
-        
-
-        (* Compile the body, given that x is in the correct slot when it's needed*)
-        @ (compile_expr b env' funenv arg_count) *)
-      
         | _ ->
         (*Compile the binding, and get the result into RAX*)
         (compile_expr e env funenv arg_count)
@@ -440,12 +422,13 @@ let rec freeVars (expr : tag expr) (vars_in_scope : string list) (free_vars_list
         @ (compile_expr b env' funenv arg_count)
         )
       
-    | Id (x,_) -> let (slot,kind) = (lookup x env) in
+    | Id (x,_) -> find_id_value x env 
+      (*let (slot,kind) = (lookup x env) in
     (match kind with
       | LocalKind -> [IMov (Reg(RAX),RegOffset(RBP,"-",8*slot))]
       | ArgKind  ->(
           if slot<=6 then [IMov (Reg(RAX),List.nth register_arguments (slot-1))]
-          else [IMov (Reg(RAX),RegOffset(RBP,"+",8*(slot-7+2)))]))
+          else [IMov (Reg(RAX),RegOffset(RBP,"+",8*(slot-7+2)))])) *)
     | If (cond,thn,els,tag) ->
       let else_label = sprintf "false_branch_%d" tag in
       let done_label = sprintf "done_%d" tag in
@@ -555,14 +538,15 @@ let rec freeVars (expr : tag expr) (vars_in_scope : string list) (free_vars_list
   | Lambda (id_list,body,tag) -> 
     let arg_count = List.length id_list in (*Cantidad de argumentos del lambda*)
     let free_vars = (freeVars body id_list []) in (* Listado de free_vars*)
-    let space_in_stack = Int64.of_int (8 * (List.length free_vars)) in (*calculo del espacio que se tiene que anadir en el stack*)
+    let free_vars_length = List.length free_vars in
+    let space_in_stack = Int64.of_int (8 * (free_vars_length)) in (*calculo del espacio que se tiene que anadir en el stack*)
     let self_env , _ = add (sprintf "self_id_%i" tag) [] ArgKind in (*Nuevo ambiente para compilar el cuerpo de lambda, primero solo con el self*)
     let arg_env = add_list id_list self_env ArgKind in (*Nuevo ambiente con el self y los argumentos del lambda*)
     let new_env = add_list free_vars arg_env LocalKind in (*Nuevo ambiente con el self, argumentos del lambda y las freevars*)
-    let slots_list = get_slots new_env (List.length free_vars) in  (*Obtengo los slots de stack las free-vars añadidas al ambiente*)
+    let slots_list = get_slots new_env (free_vars_length) in  (*Obtengo los slots de stack las free-vars añadidas al ambiente*)
     let loading_of_stack = load_free_vars_to_stack slots_list 24  in (*Carga  del stack las free_vars con los slots obtenidos*)
     let count_of_var = Int64.of_int (16* 16 * (var_count body)) in (*Calculo de espacio para variables locales*)
-    let add_free_vars_to_closure = failwith("falta hacer esto") in
+    let add_free_vars_to_closure = (add_free_vars_to_closure free_vars env 24) in
      getIJmp (sprintf "lambda_id_%i_end" tag)
     @ getILabel (sprintf "lambda_id_%i" tag)
     @ getIPush (getReg getRBP) (*comienzo de prologo*)
@@ -577,27 +561,15 @@ let rec freeVars (expr : tag expr) (vars_in_scope : string list) (free_vars_list
     @ getIRet
     @ getILabel (sprintf "lambda_id_%i_end" tag)
     (*Comienzo de creacion de la clausura*)
-    @ getIMov (getRegOffset getR15 "+" 0) (getConst (Int64.of_int arg_count)) (*Colocamos aridad*)
-    @ getIMov (getRegOffset getR15 "+" 8) (getILabelArg (sprintf "lambda_id_%i" tag)) (*Colocamos el label/code pointer*)
-    @ [add_free_vars_to_closure] (*Agregamos las variables libres a la clausura -> Esto aun no está listo*)
+    @ getIMov (getReg getR10) (getRegOffset getR15 "+" 0)
+    @ getIMov (getReg getR10) (getConst (Int64.of_int arg_count)) (*Colocamos aridad*)
+    @ getIMov (getReg getR10) (getRegOffset getR15 "+" 8)
+    @ getIMov (getReg getR10) (getILabelArg (sprintf "lambda_id_%i" tag)) (*Colocamos el label/code pointer*)
+    @ add_free_vars_to_closure (*Agregamos las variables libres a la clausura -> Esto aun no está listo*)
     @ getIMov (getReg getRAX) (getReg getR15) (*Dejo la clausura creada en RAX para asi devolverla*)
     @ getIAdd (getReg getRAX) (getConst 5L) (* Taggeamos la clausura . ( Aún falta updatear el heap pointer y con eso quedaría lista la clausura) *)
+    @ getIAdd (getReg getR15) (getConst (Int64.of_int (free_vars_length*8+24)))
     (*Fin de creación de la clausura*)
-
-    (* let id_count =  (List.length id_list) in
-    let new_env = add_list id_list [] ArgKind in
-    (* let new_fun_env = add_fun id arg_count fun_env in *)
-    let count_of_var = Int64.of_int (16* 16 * (var_count body)) in
-    let decl = [IPush(Reg(RBP));IMov(Reg(RBP),Reg(RSP));ISub(Reg(RSP),Const(count_of_var))] 
-              @ (compile_expr (tag body) new_env funenv id_count) @ [IMov(Reg(RSP),Reg(RBP))] 
-              @ [IPop (Reg(RBP))] @ [IRet] in
-              decl 
-              @ getIMov (getReg getRAX) (getReg getR15)
-              @ getOr (getReg getRAX) (getConst 5L)
-              @ getIMov (getRegOffset(getR15) "+" 0) (getConst (Int64.of_int id_count))
-              (* @ getIMov (getRegOffset(getR15) "+" 8) (getILabelArg x) *)
-              (*Falta agregar cantidad de variable libres, y abajo en vez de 8 es 16*)
-              @ getIAdd (getReg (getR15)) (getConst 8L) *)
 
   | LamApply (lambda_expr,arg_list,_) -> 
     (compile_expr lambda_expr env funenv arg_count) (*Compilo el lambda*)

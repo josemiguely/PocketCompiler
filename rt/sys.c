@@ -13,6 +13,7 @@ const uint64_t BOOL_TAG   = 0x0000000000000001;
 const VAL BOOL_TRUE =       0xffffffffffffffff;
 const VAL BOOL_FALSE =      0x7fffffffffffffff; // as chosen in compile.ml
 const VAL TUPLE_TAG = 0x1;
+const VAL CLOSURE_TAG = 0x5;
 
 char safe_type[2];
 
@@ -38,6 +39,7 @@ void tuple_print_res(VAL * addrcount,VAL count){
 
 }
 
+
 VAL print_res(VAL val) {
   if ((val & BOOL_TAG) == 0) { // val is even ==> number
     printf("%ld", ((int64_t)(val)) / 2); // shift bits right to remove tag
@@ -46,6 +48,23 @@ VAL print_res(VAL val) {
   } else if (val == BOOL_FALSE) {
     printf("false");
   } 
+
+    else if ((val & CLOSURE_TAG) == 5){
+
+      VAL* addrcount= (VAL*) (val-(VAL)5); //Untaggeamos la clausura
+      VAL count= *(addrcount);
+      // printf("count = %#018x\n",count);
+      // printf("primer valor %#018x\n",*(addrcount+1));
+      
+      // printf("count = %ld", ((int64_t)(count))); // 
+      
+      // tuple_print_res(addrcount,count); // Se le entrega addr y cantidad de tuplas
+
+      printf("CLOSURE");
+      
+      
+    }
+
   
     else if ((val & TUPLE_TAG) == 1){
       VAL* addrcount= (VAL*) (val-(VAL)1);
