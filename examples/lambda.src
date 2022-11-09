@@ -1,2 +1,3 @@
-(lambda (a b)
-    (+ 7 4)))
+(lambda (a b c x y) 
+    (lambda (x y) (+ x y))
+)

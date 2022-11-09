@@ -38,6 +38,24 @@ void tuple_print_res(VAL * addrcount,VAL count){
     printf(")");
 
 }
+// Recibe una clausura 
+void tuple_clousure_res(VAL * addrcount,VAL count){
+    // printf("count esss = %lu\n",count);
+    if (count==0){
+      printf("(cl");
+    }
+    else{
+    printf("(cl ");
+    }
+    for (int i=1;i<count+1;i++){
+    print_res(*(addrcount+i));
+    if (i<count){
+    printf(" ");
+    }
+     }
+    printf(")");
+
+}
 
 
 VAL print_res(VAL val) {
@@ -54,13 +72,11 @@ VAL print_res(VAL val) {
       VAL* addrcount= (VAL*) (val-(VAL)5); //Untaggeamos la clausura
       VAL count= *(addrcount);
       // printf("count = %#018x\n",count);
-      // printf("primer valor %#018x\n",*(addrcount+1));
+      //printf("primer valor %#018x\n",*(addrcount+1));
       
-      // printf("count = %ld", ((int64_t)(count))); // 
+      //printf("count = %ld", ((int64_t)(count))); // 
+      printf("<clos:%ld>",(int64_t)(count));
       
-      // tuple_print_res(addrcount,count); // Se le entrega addr y cantidad de tuplas
-
-      printf("CLOSURE");
       
       
     }

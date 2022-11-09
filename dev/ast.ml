@@ -97,8 +97,11 @@ let tag (e : 'a expr) : tag expr =
     | Lambda(id_list,body,_) -> 
       let (tag_body,next_tag_1) = help body (cur+1) in
       (Lambda(id_list,tag_body,cur),next_tag_1)
-    | LamApply(_,_,_) -> failwith("agregar")
-    | LetRec(_,_,_) -> failwith("agregar")
+    | LamApply(lambda,arg_list,_) -> 
+      let (tag_lambda,next_tag_1) = help lambda (cur+1) in
+      let (tag_list_arg, next_tag_2) = (tag_list arg_list (next_tag_1)) in
+      (LamApply (tag_lambda,tag_list_arg,cur),next_tag_2)     
+    | LetRec(_,_,_) -> failwith("Falta tag de LetRec")
     
       (*
       let (tag_e, next_tag) = 

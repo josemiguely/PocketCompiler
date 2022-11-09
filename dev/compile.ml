@@ -2,6 +2,7 @@ open Ast
 open Asm
 open Printf
 
+
 (* Constants*)
 let const_true = 0xFFFFFFFFFFFFFFFFL (*true value = only 1's*) 
 let const_false = 0x7FFFFFFFFFFFFFFFL (*false value = Most significant bit with 0 and then all 1's*)
@@ -138,8 +139,12 @@ let getIXor (arg1 : arg) (arg2 : arg)=
 let getILabel (label : string ) =
   [ILabel(label)]
 
-let getICall (label : string ) =
-  [ICall(label)]
+ 
+ 
+let getICall (label : arg) =
+  match label with
+  | ILabelArg a -> [ICall(a)]
+  | _ -> failwith("Fail")
 
 let getIPush (arg1:arg)  =
   [IPush (arg1)]
@@ -287,6 +292,7 @@ if (track_count == arg_count || track_count>=6)
   [IPop(List.nth register_arguments (track_count))] @ restore_arguments_after_call arg_count (track_count+1)
   
 let call_function_one_argument (funct: string) : instruction list = 
+  (* [IPush(Reg(RDI))] @[IMov(Reg(RDI),Reg(RAX))] @ [ICall(funct)] @ [IPop (Reg(RDI))] *)
   [IPush(Reg(RDI))] @[IMov(Reg(RDI),Reg(RAX))] @ [ICall(funct)] @ [IPop (Reg(RDI))]
 
 let call_function_two_argument (funct: string) : instruction list = 
@@ -329,9 +335,14 @@ let rec freeVars (expr : tag expr) (vars_in_scope : string list) (free_vars_list
     let free_vars_k =(freeVars k vars_in_scope free_vars_t) in 
     (freeVars v vars_in_scope free_vars_k) 
   | Tuple (expr_list,_) -> failwith("Tuple freevars")
-  | Lambda (_,body,_) -> freeVars body vars_in_scope free_vars_list
-  | LamApply (lambda_expr,arg_list,_) -> let free_vars_lambda =(freeVars lambda_expr vars_in_scope free_vars_list) in 
-    failwith("LamApply freevars")
+  | Lambda (id_list,body,_) -> 
+    let vars_in_scope = id_list @ vars_in_scope in
+    freeVars body vars_in_scope free_vars_list
+  | LamApply (lambda_expr,arg_list,_) -> 
+      let uniq_cons x xs = if List.mem x xs then xs else x :: xs in
+      (*let remove_from_right = List.fold_right uniq_cons ["x";"y";"z";"a";"x";"y";"z"] []*)
+      let free_vars_lambda =(freeVars lambda_expr vars_in_scope free_vars_list) in 
+        failwith("LamApply freevars")
   | _ -> free_vars_list (*Solamente deberia aplicar a Num y Bools*)
 
   (* type env = (string * int * kind) list *)
@@ -561,10 +572,16 @@ let rec add_free_vars_to_closure (free_vars_list : string list) (env : env) (acc
     @ getIRet
     @ getILabel (sprintf "lambda_id_%i_end" tag)
     (*Comienzo de creacion de la clausura*)
-    @ getIMov (getReg getR10) (getRegOffset getR15 "+" 0)
-    @ getIMov (getReg getR10) (getConst (Int64.of_int arg_count)) (*Colocamos aridad*)
-    @ getIMov (getReg getR10) (getRegOffset getR15 "+" 8)
-    @ getIMov (getReg getR10) (getILabelArg (sprintf "lambda_id_%i" tag)) (*Colocamos el label/code pointer*)
+
+    @ getIMov (getReg getR11) (getConst (Int64.of_int arg_count))
+    @ getIMov (getRegOffset getR15 "+" 0) (getReg getR11) (*Colocamos aridad *)
+    @ getIMov (getReg getR11) (getILabelArg (sprintf "lambda_id_%i" tag))
+    @ getIMov (getRegOffset getR15 "+" 8) (getReg getR11) (*Colocamos el label/code pointer*)
+
+    (* @ getIMov (getReg getR10) (getRegOffset getR15 "+" 0) *)
+    (* @ getIMov (getReg getR10) (getConst (Int64.of_int arg_count)) Colocamos aridad *)
+    (*@ getIMov (getReg getR10) (getRegOffset getR15 "+" 8)
+    @ getIMov (getReg getR10) (getILabelArg (sprintf "lambda_id_%i" tag)) Colocamos el label/code pointer*)
     @ add_free_vars_to_closure (*Agregamos las variables libres a la clausura -> Esto aun no está listo*)
     @ getIMov (getReg getRAX) (getReg getR15) (*Dejo la clausura creada en RAX para asi devolverla*)
     @ getIAdd (getReg getRAX) (getConst 5L) (* Taggeamos la clausura . ( Aún falta updatear el heap pointer y con eso quedaría lista la clausura) *)
@@ -572,7 +589,38 @@ let rec add_free_vars_to_closure (free_vars_list : string list) (env : env) (acc
     (*Fin de creación de la clausura*)
 
   | LamApply (lambda_expr,arg_list,_) -> 
+    (* let arg_list2 = [clo] @ [arg_list] in *)
+    let instr = arg_list_evaluator arg_list env 1 funenv arg_count in (*First we eval Apply arguments*)
+    let arg_number = List.length arg_list in
+    let arg_more_than_6_offset = (arg_number-6)*8 in
+    let res = Int64.of_int (max arg_more_than_6_offset 0) in
+    
     (compile_expr lambda_expr env funenv arg_count) (*Compilo el lambda*)
+    @ getIMov (getReg getRDI) (getReg getRAX)
+    @ getISub (getReg getRAX) (getConst 5L) (*Le sacamos el tag*)
+    @ save_arguments_before_call arg_count 0 (* save register arguments*)
+    
+    @ instr (* Push arguments from 7 to arg_number*)
+    @ getIMov (getReg getR10) (getRegOffset getRAX "+" 8) 
+    @ getICall (getReg getR10)  
+    @ getIAdd (getReg getRSP) (getConst res) (*pop arguments*)
+    @ restore_arguments_after_call arg_count 0
+    
+
+
+
+    
+
+    
+                                                    (*Checkeamos que es una clausura*)
+                                                    (*Untag de clausura*)
+                                                    (*Checkeamos aridad*)
+                                              
+                                                    (*Ponemos argumentos en registros/stack*)
+                                                    (*Llamamos a la seccion de codigo*)
+                                                    (*Pop arguments en caso de haber argumentos en el stack*)
+                                                    
+
 
   | _ -> failwith("Falta implementar LetRec y los Records :(")
 
@@ -642,6 +690,20 @@ let rec add_free_vars_to_closure (free_vars_list : string list) (env : env) (acc
     (*Evaluates args of a function. It recursively compiles the arg and prepares it for function call*)
     (*If arg is from the first 6 arguments of the function, then it uses registers, else it pushes the argument to the stack*)
     and arg_list_evaluator (arg_exp_list : tag expr list) (env : env) (count:int) (funenv : funenv) (arg_count : int)  =
+    match arg_exp_list with
+    | h::t ->
+      if count<6 (*if first 6 arguments, then move argument result to adequate argument register*)
+        then (arg_list_evaluator t env (count+1) funenv arg_count) 
+              @ compile_expr h env funenv arg_count 
+              @ [IMov(List.nth register_arguments count,Reg(RAX))]
+        else (arg_list_evaluator t env (count+1) funenv arg_count) (*else push argument result to stack*)
+              @ compile_expr h env funenv arg_count 
+              @ [IPush(Reg(RAX))]
+    | [] -> []
+
+    (*Evaluates args of a function. It recursively compiles the arg and prepares it for function call*)
+    (*If arg is from the first 6 arguments of the function, then it uses registers, else it pushes the argument to the stack*)
+    and arg_list_evaluator2 (arg_exp_list : tag expr list) (env : env) (count:int) (funenv : funenv) (arg_count : int)  =
     match arg_exp_list with
     | h::t ->
       if count<6 (*if first 6 arguments, then move argument result to adequate argument register*)

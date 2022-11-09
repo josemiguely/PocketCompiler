@@ -1,0 +1,6 @@
+NAME: A tuple of lambdas 
+DESCRIPTION: evaluates a multiple clousures in a tuple 
+SRC:
+(tup (lambda () true) (lambda (x y) (+ x y)))
+EXPECTED:
+|ORACLE

@@ -1,0 +1,7 @@
+NAME: A lambda without arguments
+DESCRIPTION: evaluates a clousure without argumnets
+SRC:
+(lambda ()
+    (+ 1 3)))
+EXPECTED:
+|ORACLE

@@ -1,0 +1,8 @@
+NAME: A lambda with an inner lambda
+DESCRIPTION: evaluates a lambda inside a lambda
+SRC:
+(lambda (a b c x y) 
+    (lambda (x y) (+ x y))
+)
+EXPECTED:
+|ORACLE

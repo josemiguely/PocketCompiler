@@ -1,0 +1,7 @@
+NAME: A lambda with arguments
+DESCRIPTION: evaluates a clousure with argumnets
+SRC:
+(lambda (a b c d)
+    (+ c (+ a b))))
+EXPECTED:
+|ORACLE
