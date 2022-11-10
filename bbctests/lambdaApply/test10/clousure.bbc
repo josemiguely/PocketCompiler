@@ -1,0 +1,12 @@
+NAME: A lambda apply using a lambda as a argument 2
+DESCRIPTION: evaluates a lambda that uses another lambda as argument 2
+SRC:
+(
+  (def (add3 x) (+ 3 x))
+  (def (mappair f p) (tup (@ f (get p 0)) (@ f (get p 1))))
+
+  (mappair (lambda (x) (add3 x)) (tup 39 2))
+)
+  
+EXPECTED:
+|ORACLE

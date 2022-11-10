@@ -1,0 +1,7 @@
+NAME: Try to apply a lambda with more arguments
+DESCRIPTION: breaks with runtime error because it got more arguments than expected
+STATUS: RT error
+SRC:
+(@ (lambda () (tup 1 2)) false 6 (tup))
+EXPECTED:
+Arity mismatch: closure expected 0 arguments but got 3

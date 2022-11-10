@@ -1,9 +1,12 @@
 NAME: A lambda apply with a def doesnt share namespace
 DESCRIPTION: evaluates a lambda that doesnt share namespace with top level env
 SRC:
-(let (foo (lambda (w x y z) (lambda (a) (let (temp1 x) 2)))) 
+(let (foo (lambda (w x y z) 
+                (lambda (a) 
+                      (let (temp1 (+ a x)) 
+                          (+ temp1 z)))))
   (let (temp2 (@ foo 1 2 3 4)) 
-  (@ temp2 5)))
+    (@ temp2 5)))
   
 EXPECTED:
 |ORACLE

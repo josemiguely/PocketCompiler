@@ -1,0 +1,1 @@
+(@ (lambda () (tup 1 2)) false 6 (tup))

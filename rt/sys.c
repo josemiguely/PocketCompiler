@@ -213,6 +213,7 @@ void check_non_zero_denominator (VAL d){
 const int ERR_NOT_NUMBER=1;
 const int ERR_NOT_BOOLEAN=2;
 const int ERR_NOT_TUPLE=3;
+const int ERR_NOT_CLOSURE=4;
 
 void error(int errCode, VAL val){
  
@@ -234,6 +235,12 @@ void error(int errCode, VAL val){
     print_res(val);
   }
 
+  else if (errCode == ERR_NOT_CLOSURE){
+    printf("Type error: Expected closure but got ");
+    print_res(val);
+  }
+
+
   else{
     printf("Error code not recognized, mayor bug in code");
   }
@@ -248,7 +255,13 @@ void tuple_index_error (VAL* tuple,int index){
   exit(-1);
 }
 
-
+void closure_arity_mismatch (int expected_arity,int arity){
+ // int count= *(closure);
+  printf("Arity mismatch: closure expected %i arguments but got %i",expected_arity,arity);
+//   VAL count = *(tuple);
+//   tuple_print_res(closure,count);
+  exit(-1);
+}
 
 
 int main(int argc, char** argv) {

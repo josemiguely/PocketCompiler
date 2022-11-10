@@ -1,0 +1,9 @@
+NAME: A lambda apply using a lambda as a argument 2
+DESCRIPTION: evaluates a lambda that uses another lambda as argument 2
+SRC:
+(let (add1 (lambda (x) (+ x 1)))
+  (let (f (lambda (x y z q g h i) (+ (* (+ (* (+ (@ x y) z) q) g) h) i)))
+    (@ f add1 21 22 23 24 25 26)))
+  
+EXPECTED:
+|ORACLE

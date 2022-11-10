@@ -1,0 +1,6 @@
+NAME: Try to apply a bool as a lambda
+DESCRIPTION: breaks with runtime error because de first argument is a boolean
+SRC:
+(@ false 1 2)
+EXPECTED:
+|ORACLE

@@ -1,0 +1,6 @@
+NAME: Try to apply a tuple as a lambda
+DESCRIPTION: breaks with runtime error because de first argument is a tuple
+SRC:
+(@ (tup -2 true) 6)
+EXPECTED:
+|ORACLE

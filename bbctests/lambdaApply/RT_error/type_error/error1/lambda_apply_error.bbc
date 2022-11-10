@@ -1,0 +1,6 @@
+NAME: Try to apply a number as a lambda
+DESCRIPTION: breaks with runtime error because de first argument is a number
+SRC:
+(@ 1 true)
+EXPECTED:
+|ORACLE

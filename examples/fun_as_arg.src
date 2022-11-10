@@ -1,0 +1,6 @@
+(
+  (def (mappair f p) (@ f p))
+  (def (add1 x) (+ x 1))
+
+  (mappair (lambda (x) (+ 4 x)) 5)
+)

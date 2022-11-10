@@ -1,0 +1,7 @@
+NAME: Try to apply a lambda with less arguments
+DESCRIPTION: breaks with runtime error because it got less arguments than expected
+STATUS: RT error
+SRC:
+(@ (lambda (x y) (+ y x)) 4)
+EXPECTED:
+Arity mismatch: closure expected 2 arguments but got 1

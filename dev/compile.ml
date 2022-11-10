@@ -186,7 +186,10 @@ let test_tuple_instruction =    (getIMov (getReg getRCX) (getReg getRAX))
                               @ (getICmp (getReg getRCX) (getConst 1L))
                               @ (getIJne "error_not_tuple")
 
-
+let test_closure_instruction =  (getIMov (getReg getR10) (getReg getRAX))  
+                              @ (getIAnd (getReg getR10) (getConst 7L))          
+                              @ (getICmp (getReg getR10) (getConst 5L))
+                              @ (getIJne "error_not_clousure")
 let test_index_out_of_bounds =  (getICmp (getReg (getRAX))(getConst 0L) ) (* Si se quiere acceder a una posicion menor que 0 entonces tirar error *)
                               @ (getIJl ("error_tuple_index_error"))
                               @ (getICmp (getReg (getRAX)) (getRegOffset getR11 "+" 0)) (*Si se quiere acceder a un indice mas grande tira error *)
@@ -323,33 +326,51 @@ let rec var_count(ex: tag expr) : int  =
   |_ -> 1
 
 
+
+
+
+
 (*Recibe una expresion y una lista de variables en scope, devuelve una lista de variables libres*)
-let rec freeVars (expr : tag expr) (vars_in_scope : string list) (free_vars_list) : string list =
+let rec freeVars (expr : tag expr) (vars_in_scope : string list) (free_vars_list : string list) : string list =
+  let uniq_cons x xs = if List.mem x xs then xs else x :: xs in
   match expr with
   | Prim1 (_,expr,_) -> (freeVars expr vars_in_scope free_vars_list)
-  | Let (x,_,b,_) -> let vars_in_scope = [x] @ vars_in_scope in
-                      (freeVars b vars_in_scope free_vars_list)
+  | Let (x,e,b,_) ->
+    let free_vars_expr = (freeVars e vars_in_scope free_vars_list) in 
+    let vars_in_scope = [x] @ vars_in_scope in
+                (freeVars b vars_in_scope free_vars_expr)
   | Id (x,_) -> let is_in_scope=(List.mem x vars_in_scope) in
-  let is_in_free_vars=(List.mem x free_vars_list) in
-    if (is_in_scope || is_in_free_vars) then free_vars_list 
-    else [x] @ free_vars_list
+      let is_in_free_vars=(List.mem x free_vars_list) in
+        if (is_in_scope || is_in_free_vars) then free_vars_list 
+        else [x] @ free_vars_list
   | Prim2 (_,expr1,expr2,_) -> let free_vars_left =(freeVars expr1 vars_in_scope free_vars_list) in 
     (freeVars expr2 vars_in_scope free_vars_left) 
-  | Apply (_,expr_list,_) -> failwith("Apply freevars")
+  | Apply (_,expr_list,_) -> 
+        let free_vars_expr_list = (freeVars_in_list expr_list vars_in_scope free_vars_list) in
+        (List.fold_right uniq_cons free_vars_expr_list [])
   | Set (t,k,v,_) -> let free_vars_t =(freeVars t vars_in_scope free_vars_list) in 
     let free_vars_k =(freeVars k vars_in_scope free_vars_t) in 
     (freeVars v vars_in_scope free_vars_k) 
-  | Tuple (expr_list,_) -> failwith("Tuple freevars")
+  | Tuple (expr_list,_) -> 
+      let free_vars_expr_list = (freeVars_in_list expr_list vars_in_scope free_vars_list) in
+      (List.fold_right uniq_cons free_vars_expr_list [])
   | Lambda (id_list,body,_) -> 
     let vars_in_scope = id_list @ vars_in_scope in
     freeVars body vars_in_scope free_vars_list
   | LamApply (lambda_expr,arg_list,_) -> 
-    (* printf("lamapply"); *)
-      let uniq_cons x xs = if List.mem x xs then xs else x :: xs in
       (*let remove_from_right = List.fold_right uniq_cons ["x";"y";"z";"a";"x";"y";"z"] []*)
       let free_vars_lambda =(freeVars lambda_expr vars_in_scope free_vars_list) in 
-        failwith("LamApply freevars")
+      let free_vars_arg_list = (freeVars_in_list arg_list vars_in_scope free_vars_lambda) in
+      (List.fold_right uniq_cons free_vars_arg_list [])
+
   | _ -> free_vars_list (*Solamente deberia aplicar a Num y Bools*)
+  
+
+  and freeVars_in_list (expr_list : tag expr list) (vars_in_scope : string list) (free_vars_list : string list ) =
+  match expr_list with
+    | h::t -> (freeVars_in_list t vars_in_scope free_vars_list) @ freeVars h vars_in_scope free_vars_list 
+    | []  -> []
+
 
   (* type env = (string * int * kind) list *)
   (*Devuelve los primeros amount slots de un env*)
@@ -603,14 +624,21 @@ let rec add_free_vars_to_closure (free_vars_list : string list) (env : env) (acc
     let arg_more_than_6_offset = (arg_number-6)*8 in
     let res = Int64.of_int (max arg_more_than_6_offset 0) in
     (compile_expr lambda_expr env funenv arg_count) (*Compilo el lambda*)
+    @ test_closure_instruction (*checkemos que sea una clausura RAX*)
     @ getIMov (getReg getRDI) (getReg getRAX)
     @ getISub (getReg getRAX) (getConst 5L) (*Le sacamos el tag*)
-    @ getIMov(getReg getR11) (getReg getRAX) (*Lo guardamos en R11*)
+    @ getIMov(getReg getR11) (getReg getRAX)  (*guardamos en R11 la clausura sin tag*)   
+
+    @ getIMov (getReg getR10) (getRegOffset getR11 "+" 0)  (* R10 tiene la aridad correcta *)
+    @ getIMov (getReg getR11) (getConst (Int64.of_int arg_number)) (* R11 tiene la aridad entregada *)
+    @ getICmp (getReg getR10) (getReg getR11) (*se comparan las aridades*)
+    @ (getIJne "error_arity_mismatch")
+
+    @ getIMov(getReg getR11) (getReg getRAX)  (*Volvemos a guardar en R11 la clausura sin tag*)   
     @ save_arguments_before_call arg_count 0 (* save register arguments*)
     @ instr (* Push arguments from 7 to arg_number*)
     @ getIMov (getReg getR10) (getRegOffset getR11 "+" 8) 
     @ getICallArg (getReg getR10)  
-    (* @ getICall ("lambda_id_2") *)
     @ getIAdd (getReg getRSP) (getConst res) (*pop arguments*)
     @ restore_arguments_after_call arg_count 0
     
@@ -804,7 +832,7 @@ let rec compile_list_decl (decl_list:fundef list) (fun_env : funenv) : (string *
   | [] -> ("",fun_env) 
 
 let extern_list = 
-  ["error";"print";"check_overflow_add";"check_overflow_sub";"check_overflow_mul";"check_non_zero_denominator";"tuple_index_error"]
+  ["error";"print";"check_overflow_add";"check_overflow_sub";"check_overflow_mul";"check_non_zero_denominator";"tuple_index_error";"closure_arity_mismatch"]
 
 
 let rec extern_functions (s:string list): string =
@@ -834,7 +862,19 @@ error_tuple_index_error:
   mov RSI,RAX
   add R11,0x1
   call tuple_index_error
+
+error_not_clousure:
+  mov RSI,RAX
+  mov RDI,0x4
+  call error
+
+error_arity_mismatch:
+  mov RDI,R10
+  mov RSI,R11
+  call closure_arity_mismatch
 "
+(*  *)
+
 
 let prologue ="  mov RSP, RBP
   pop RBP
