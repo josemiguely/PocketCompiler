@@ -1,0 +1,9 @@
+NAME:  a fun with that recieves a tuple
+DESCRIPTION: a fun that recieves a tuple
+SRC:
+(
+  (def (fun x) (get x 0))
+  (fun (tup 1 2 3))
+)
+EXPECTED:
+|ORACLE

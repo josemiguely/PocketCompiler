@@ -283,7 +283,8 @@ let add_fun name arity fun_env : (funenv) =
     
 (*Save arguments of actual function / caller before calling a new function*)
 let rec save_arguments_before_call (arg_count : int) (track_count : int) : instruction list  =
-(* print_int track_count;  *)
+(* printf "arg_count = %i" arg_count;
+printf "track_count = %i" track_count; *)
 if track_count == arg_count
   then []
 else 
@@ -619,8 +620,8 @@ let rec add_free_vars_to_closure (free_vars_list : string list) (env : env) (acc
 
   | LamApply (lambda_expr,arg_list,_) -> 
     (* let arg_list2 = [clo] @ [arg_list] in *)
-    let instr = arg_list_evaluator arg_list env 1 funenv arg_count in (*First we eval Apply arguments*)
     let arg_number = List.length arg_list in
+    let instr = arg_list_evaluator arg_list env 1 funenv arg_count in (*First we eval Apply arguments*)
     let arg_more_than_6_offset = (arg_number-6)*8 in
     let res = Int64.of_int (max arg_more_than_6_offset 0) in
     (compile_expr lambda_expr env funenv arg_count) (*Compilo el lambda*)

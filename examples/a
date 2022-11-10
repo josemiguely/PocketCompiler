@@ -1,0 +1,227 @@
+section .text                       
+global our_code_starts_here
+extern error
+extern print
+extern check_overflow_add
+extern check_overflow_sub
+extern check_overflow_mul
+extern check_non_zero_denominator
+extern tuple_index_error
+extern closure_arity_mismatch
+
+our_code_starts_here:
+  push RBP
+  mov RBP, RSP
+  sub RSP, 0x200
+  mov R15, RDI
+  add R15, 0x7
+  mov R11, 0xfffffffffffffff8
+  and R15, R11
+  mov RAX, 0x40
+  mov [RBP - 8], RAX
+  mov RAX, 0x4
+  mov [RBP - 16], RAX
+  mov R10, 0x2
+  mov [R15 + 0], R10
+  mov RAX, [RBP - 8]
+  mov [R15 + 8], RAX
+  mov RAX, [RBP - 16]
+  mov [R15 + 16], RAX
+  mov RAX, R15
+  add RAX, 0x1
+  add R15, 0x18
+  mov RSI, RAX
+  jmp lambda_id_2_end
+  lambda_id_2:
+  push RBP
+  mov RBP, RSP
+  sub RSP, 0
+  mov R11, RDI
+  sub R11, 0x5
+  sub RSP, 0x200
+  push RSI
+  push RDI
+  mov RAX, RSI
+  mov RDI, RAX
+  call add3
+  add RSP, 0
+  pop RDI
+  pop RSI
+  mov RSP, RBP
+  pop RBP
+  ret
+  lambda_id_2_end:
+  mov R11, 0x1
+  mov [R15 + 0], R11
+  mov R11, lambda_id_2
+  mov [R15 + 8], R11
+  mov R11, 0
+  mov [R15 + 16], R11
+  mov RAX, R15
+  add RAX, 0x5
+  add R15, 0x18
+  mov RDI, RAX
+  call mappair
+  add RSP, 0
+  mov RSP, RBP
+  pop RBP
+  ret
+
+  add3:
+  push RBP
+  mov RBP, RSP
+  sub RSP, 0x200
+  mov RAX, 0x6
+  test RAX, 0x1
+  jnz error_not_number
+  mov [RBP - 16], RAX
+  mov RAX, RDI
+  test RAX, 0x1
+  jnz error_not_number
+  mov [RBP - 24], RAX
+  push RSI
+  push RDI
+  mov RDI, [RBP - 16]
+  mov RSI, [RBP - 24]
+  call check_overflow_add
+  pop RDI
+  pop RSI
+  mov RAX, [RBP - 16]
+  add RAX, [RBP - 24]
+  mov RSP, RBP
+  pop RBP
+  ret
+
+  mappair:
+  push RBP
+  mov RBP, RSP
+  sub RSP, 0x100
+  mov RAX, RDI
+  push RDI
+  mov RDI, RAX
+  call print
+  pop RDI
+  mov R10, RAX
+  and R10, 0x7
+  cmp R10, 0x5
+  jne error_not_clousure
+  mov RDI, RAX
+  sub RAX, 0x5
+  mov R11, RAX
+  mov R10, [R11 + 0]
+  mov R11, 0x1
+  cmp R10, R11
+  jne error_arity_mismatch
+  mov R11, RAX
+  push RSI
+  push RDI
+  mov RAX, RSI
+  mov RCX, RAX
+  and RCX, 0x7
+  cmp RCX, 0x1
+  jne error_not_tuple
+  sub RAX, 0x1
+  mov R11, RAX
+  push R11
+  mov RAX, 0
+  pop R11
+  sar RAX, 0x1
+  cmp RAX, 0
+  jl error_tuple_index_error
+  cmp RAX, [R11 + 0]
+  jge error_tuple_index_error
+  add RAX, 0x1
+  imul RAX, 0x8
+  add R11, RAX
+  mov RAX, [R11 + 0]
+  mov RSI, RAX
+  mov R10, [R11 + 8]
+  call R10
+  add RSP, 0
+  pop RDI
+  pop RSI
+  mov [RBP - 24], RAX
+  mov RAX, RDI
+  mov R10, RAX
+  and R10, 0x7
+  cmp R10, 0x5
+  jne error_not_clousure
+  mov RDI, RAX
+  sub RAX, 0x5
+  mov R11, RAX
+  mov R10, [R11 + 0]
+  mov R11, 0x1
+  cmp R10, R11
+  jne error_arity_mismatch
+  mov R11, RAX
+  push RSI
+  push RDI
+  mov RAX, RSI
+  mov RCX, RAX
+  and RCX, 0x7
+  cmp RCX, 0x1
+  jne error_not_tuple
+  sub RAX, 0x1
+  mov R11, RAX
+  push R11
+  mov RAX, 0x2
+  pop R11
+  sar RAX, 0x1
+  cmp RAX, 0
+  jl error_tuple_index_error
+  cmp RAX, [R11 + 0]
+  jge error_tuple_index_error
+  add RAX, 0x1
+  imul RAX, 0x8
+  add R11, RAX
+  mov RAX, [R11 + 0]
+  mov RSI, RAX
+  mov R10, [R11 + 8]
+  call R10
+  add RSP, 0
+  pop RDI
+  pop RSI
+  mov [RBP - 32], RAX
+  mov R10, 0x2
+  mov [R15 + 0], R10
+  mov RAX, [RBP - 24]
+  mov [R15 + 8], RAX
+  mov RAX, [RBP - 32]
+  mov [R15 + 16], RAX
+  mov RAX, R15
+  add RAX, 0x1
+  add R15, 0x18
+  mov RSP, RBP
+  pop RBP
+  ret
+
+error_not_number:
+  mov RSI,RAX
+  mov RDI,0x1
+  call error
+  
+error_not_boolean:
+  mov RSI,RAX
+  mov RDI,0x2
+  call error
+
+error_not_tuple:
+  mov RSI,RAX
+  mov RDI,0x3
+  call error
+
+error_tuple_index_error:
+  mov RDI,R11
+  mov RSI,RAX
+  add R11,0x1
+  call tuple_index_error
+
+error_not_clousure:
+  mov RSI,RAX
+  mov RDI,0x4
+  call error
+
+error_arity_mismatch:
+  mov RDI,R10
+  mov RSI,R11
+  call closure_arity_mismatch
