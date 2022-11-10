@@ -141,10 +141,15 @@ let getILabel (label : string ) =
 
  
  
-let getICall (label : arg) =
-  match label with
+let getICall (label : string) =
+  [ICall (label)]
+  (* match label with
   | ILabelArg a -> [ICall(a)]
-  | _ -> failwith("Fail")
+  | _ -> failwith("Fail") *)
+
+
+let getICallArg (label : arg) =
+  [ICallArg (label)]
 
 let getIPush (arg1:arg)  =
   [IPush (arg1)]
@@ -339,6 +344,7 @@ let rec freeVars (expr : tag expr) (vars_in_scope : string list) (free_vars_list
     let vars_in_scope = id_list @ vars_in_scope in
     freeVars body vars_in_scope free_vars_list
   | LamApply (lambda_expr,arg_list,_) -> 
+    (* printf("lamapply"); *)
       let uniq_cons x xs = if List.mem x xs then xs else x :: xs in
       (*let remove_from_right = List.fold_right uniq_cons ["x";"y";"z";"a";"x";"y";"z"] []*)
       let free_vars_lambda =(freeVars lambda_expr vars_in_scope free_vars_list) in 
@@ -567,8 +573,13 @@ let rec add_free_vars_to_closure (free_vars_list : string list) (env : env) (acc
     @ getISub (getReg getR11) (getConst 5L) (*Untag del self*)
     @ loading_of_stack (*Cargo en el stack las free_vars desde la clausura*)
     @ getISub (getReg getRSP) (getConst count_of_var) (*Hago espacio para variables locales*)
-    @ compile_expr body new_env funenv (arg_count + 1) (*Compiilo el cuerpo del lambda*)
+    @ compile_expr body new_env funenv (arg_count + 1) (*Compilo el cuerpo del lambda*)
+    @ getIMov (getReg getRSP) (getReg getRBP)
     @ getIPop (getReg getRBP)
+    (* @ getIPush (getReg getRDI)
+    @ getIMov (getReg getRDI) (getConst 100L) (*debug*)
+    @ getICall("print")
+    @ getIPop (getReg getRDI) fin debug *)
     @ getIRet
     @ getILabel (sprintf "lambda_id_%i_end" tag)
     (*Comienzo de creacion de la clausura*)
@@ -577,12 +588,9 @@ let rec add_free_vars_to_closure (free_vars_list : string list) (env : env) (acc
     @ getIMov (getRegOffset getR15 "+" 0) (getReg getR11) (*Colocamos aridad *)
     @ getIMov (getReg getR11) (getILabelArg (sprintf "lambda_id_%i" tag))
     @ getIMov (getRegOffset getR15 "+" 8) (getReg getR11) (*Colocamos el label/code pointer*)
-
-    (* @ getIMov (getReg getR10) (getRegOffset getR15 "+" 0) *)
-    (* @ getIMov (getReg getR10) (getConst (Int64.of_int arg_count)) Colocamos aridad *)
-    (*@ getIMov (getReg getR10) (getRegOffset getR15 "+" 8)
-    @ getIMov (getReg getR10) (getILabelArg (sprintf "lambda_id_%i" tag)) Colocamos el label/code pointer*)
-    @ add_free_vars_to_closure (*Agregamos las variables libres a la clausura -> Esto aun no está listo*)
+    @ getIMov (getReg getR11) (getConst (Int64.of_int free_vars_length))
+    @ getIMov (getRegOffset getR15 "+" 16) (getReg getR11) (*Colocamos la cantidad de variable libres*)
+    @ add_free_vars_to_closure (*Agregamos las variables libres a la clausura*)
     @ getIMov (getReg getRAX) (getReg getR15) (*Dejo la clausura creada en RAX para asi devolverla*)
     @ getIAdd (getReg getRAX) (getConst 5L) (* Taggeamos la clausura . ( Aún falta updatear el heap pointer y con eso quedaría lista la clausura) *)
     @ getIAdd (getReg getR15) (getConst (Int64.of_int (free_vars_length*8+24)))
@@ -594,19 +602,19 @@ let rec add_free_vars_to_closure (free_vars_list : string list) (env : env) (acc
     let arg_number = List.length arg_list in
     let arg_more_than_6_offset = (arg_number-6)*8 in
     let res = Int64.of_int (max arg_more_than_6_offset 0) in
-    
     (compile_expr lambda_expr env funenv arg_count) (*Compilo el lambda*)
     @ getIMov (getReg getRDI) (getReg getRAX)
     @ getISub (getReg getRAX) (getConst 5L) (*Le sacamos el tag*)
+    @ getIMov(getReg getR11) (getReg getRAX) (*Lo guardamos en R11*)
     @ save_arguments_before_call arg_count 0 (* save register arguments*)
-    
     @ instr (* Push arguments from 7 to arg_number*)
-    @ getIMov (getReg getR10) (getRegOffset getRAX "+" 8) 
-    @ getICall (getReg getR10)  
+    @ getIMov (getReg getR10) (getRegOffset getR11 "+" 8) 
+    @ getICallArg (getReg getR10)  
+    (* @ getICall ("lambda_id_2") *)
     @ getIAdd (getReg getRSP) (getConst res) (*pop arguments*)
     @ restore_arguments_after_call arg_count 0
     
-
+    
 
 
     

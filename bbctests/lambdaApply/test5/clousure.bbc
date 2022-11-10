@@ -1,0 +1,7 @@
+NAME: A lambda apply with 2 arguments
+DESCRIPTION: evaluates a lambda with multiple arguments
+SRC:
+(let (f (@ (lambda (a) (lambda (b) (+ a b))) 10))
+   (@ f 2))
+EXPECTED:
+|ORACLE

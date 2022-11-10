@@ -41,7 +41,8 @@ type instruction =
   | ITest of arg * arg(*Tests two numbers by a logical and*)
   | IXor of arg * arg
   | ILabel of string (*Section of code*)
-  | ICall of string (*Call function*)
+  | ICall of string (*Call function with string label*)
+  | ICallArg of arg (*Call function with arg label*)
   | IPush of arg (*Push arg into top of stack*)
   | IPop of arg (*Pop from top of stack*)
   | IShl of arg * arg (* << *)
@@ -98,6 +99,7 @@ let rec asm_to_string (asm : instruction list) : string =
   | [ILabel (arg1)] -> sprintf "  %s:\n" (arg1)
   | [ITest (arg1,arg2)] -> sprintf "  test %s, %s\n" (pp_arg arg1) (pp_arg arg2)
   | [ICall (arg1)] -> sprintf "  call %s\n" (arg1)
+  | [ICallArg (arg1)] -> sprintf "  call %s\n" (pp_arg arg1)
   | [IPush (arg1)] -> sprintf "  push %s\n" (pp_arg arg1)
   | [IPop (arg1)] -> sprintf "  pop %s\n" (pp_arg arg1)
   | [IRet] -> sprintf "  ret\n"

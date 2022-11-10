@@ -39,26 +39,27 @@ void tuple_print_res(VAL * addrcount,VAL count){
 
 }
 // Recibe una clausura 
-void tuple_clousure_res(VAL * addrcount,VAL count){
-    // printf("count esss = %lu\n",count);
-    if (count==0){
-      printf("(cl");
-    }
-    else{
-    printf("(cl ");
-    }
-    for (int i=1;i<count+1;i++){
-    print_res(*(addrcount+i));
-    if (i<count){
-    printf(" ");
-    }
-     }
-    printf(")");
+// void tuple_clousure_res(VAL * addrcount,VAL count){
+//     // printf("count esss = %lu\n",count);
+//     if (count==0){
+//       printf("(cl");
+//     }
+//     else{
+//     printf("(cl ");
+//     }
+//     for (int i=1;i<count+1;i++){
+//     print_res(*(addrcount+i));
+//     if (i<count){
+//     printf(" ");
+//     }
+//      }
+//     printf(")");
 
-}
+// }
 
 
 VAL print_res(VAL val) {
+ 
   if ((val & BOOL_TAG) == 0) { // val is even ==> number
     printf("%ld", ((int64_t)(val)) / 2); // shift bits right to remove tag
   } else if (val == BOOL_TRUE) {
@@ -251,7 +252,7 @@ void tuple_index_error (VAL* tuple,int index){
 
 
 int main(int argc, char** argv) {
-  
+  // printf("Hola mundo Main");
   char *SAFE = getenv("SAFE");
 
   uint64_t* HEAP = calloc(1024, sizeof(uint64_t)); // Allocate 8KB of memory for now
@@ -268,6 +269,7 @@ int main(int argc, char** argv) {
 
   
   u64 result = our_code_starts_here(HEAP);
+  // printf("devuelve result");
   print_res(result);
   free(HEAP);
   return 0;
