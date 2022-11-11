@@ -14,6 +14,7 @@ type reg =
 | R9 (*arg 6*)
 | R15 (* heap pointer*)
 | R11 (* I think tmp register*)
+| R12 (*testing this register*)
 
 (* arguments for instructions *)
 type arg =
@@ -66,6 +67,7 @@ let pp_reg reg : string =
   | R9 -> "R9"
   | R15 -> "R15"
   | R11 -> "R11"
+  | R12 -> "R12"
 
 let pp_arg arg : string =
   match arg with

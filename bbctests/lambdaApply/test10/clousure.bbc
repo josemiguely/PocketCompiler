@@ -1,4 +1,4 @@
-NAME: A lambda apply using a lambda as a argument 2
+NAME: A lambda apply using a lambda as a argument taken from instructions
 DESCRIPTION: evaluates a lambda that uses another lambda as argument 2
 SRC:
 (

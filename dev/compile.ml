@@ -44,6 +44,9 @@ let getRSP = RSP
 
 let getR10 = R10
 
+
+let getR12 = R12
+
 let getRBP = RBP
 
 let getRDI = RDI
@@ -520,8 +523,8 @@ let rec add_free_vars_to_closure (free_vars_list : string list) (env : env) (acc
     let _ = lookup_fun id funenv arg_number in
     let arg_more_than_6_offset = (arg_number-6)*8 in
     let res = Int64.of_int (max arg_more_than_6_offset 0) in
-    save_arguments_before_call arg_count 0 (* save register arguments*)
-    @ instr (* Push arguments from 7 to arg_number*)
+    save_arguments_before_call arg_count 0 (* saves previous function arguments*)
+    @ instr (* Evaluates arguments and inserts arguments for function call*)
     @ [ICall(id)]  
     @ [IAdd(Reg(RSP),Const(res))] 
     @ restore_arguments_after_call arg_count 0
@@ -598,10 +601,6 @@ let rec add_free_vars_to_closure (free_vars_list : string list) (env : env) (acc
     @ compile_expr body new_env funenv (arg_count + 1) (*Compilo el cuerpo del lambda*)
     @ getIMov (getReg getRSP) (getReg getRBP)
     @ getIPop (getReg getRBP)
-    (* @ getIPush (getReg getRDI)
-    @ getIMov (getReg getRDI) (getConst 100L) (*debug*)
-    @ getICall("print")
-    @ getIPop (getReg getRDI) fin debug *)
     @ getIRet
     @ getILabel (sprintf "lambda_id_%i_end" tag)
     (*Comienzo de creacion de la clausura*)
@@ -635,27 +634,17 @@ let rec add_free_vars_to_closure (free_vars_list : string list) (env : env) (acc
     @ getICmp (getReg getR10) (getReg getR11) (*se comparan las aridades*)
     @ (getIJne "error_arity_mismatch")
 
-    @ getIMov(getReg getR11) (getReg getRAX)  (*Volvemos a guardar en R11 la clausura sin tag*)   
-    @ save_arguments_before_call arg_count 0 (* save register arguments*)
-    @ instr (* Push arguments from 7 to arg_number*)
-    @ getIMov (getReg getR10) (getRegOffset getR11 "+" 8) 
-    @ getICallArg (getReg getR10)  
+    @ getIMov(getReg getR12) (getReg getRAX) (*Volvemos a guardar en R11 la clausura sin tag*)  
+    @ save_arguments_before_call arg_count 0 (* saves previous function arguments*)
+    (* @ getIPush (getReg getR11) (*Arreglo 1 *)  *)
+    @ instr (* Evaluates arguments and inserts arguments for function call*)
+    (* @ getIPop (getReg getR11) Cosa nueva 1 *)
+    @ getIMov (getReg getR10) (getRegOffset getR12 "+" 8) 
+    @ getICallArg (getReg getR10) 
     @ getIAdd (getReg getRSP) (getConst res) (*pop arguments*)
     @ restore_arguments_after_call arg_count 0
     
     
-
-
-    
-
-    
-                                                    (*Checkeamos que es una clausura*)
-                                                    (*Untag de clausura*)
-                                                    (*Checkeamos aridad*)
-                                              
-                                                    (*Ponemos argumentos en registros/stack*)
-                                                    (*Llamamos a la seccion de codigo*)
-                                                    (*Pop arguments en caso de haber argumentos en el stack*)
                                                     
 
 
