@@ -455,12 +455,6 @@ let rec add_free_vars_to_closure (free_vars_list : string list) (env : env) (acc
         )
       
     | Id (x,_) -> find_id_value x env 
-      (*let (slot,kind) = (lookup x env) in
-    (match kind with
-      | LocalKind -> [IMov (Reg(RAX),RegOffset(RBP,"-",8*slot))]
-      | ArgKind  ->(
-          if slot<=6 then [IMov (Reg(RAX),List.nth register_arguments (slot-1))]
-          else [IMov (Reg(RAX),RegOffset(RBP,"+",8*(slot-7+2)))])) *)
     | If (cond,thn,els,tag) ->
       let else_label = sprintf "false_branch_%d" tag in
       let done_label = sprintf "done_%d" tag in
@@ -603,7 +597,7 @@ let rec add_free_vars_to_closure (free_vars_list : string list) (env : env) (acc
     @ getIMov (getRegOffset getR15 "+" 16) (getReg getR11) (*Colocamos la cantidad de variable libres*)
     @ add_free_vars_to_closure (*Agregamos las variables libres a la clausura*)
     @ getIMov (getReg getRAX) (getReg getR15) (*Dejo la clausura creada en RAX para asi devolverla*)
-    @ getIAdd (getReg getRAX) (getConst 5L) (* Taggeamos la clausura . ( Aún falta updatear el heap pointer y con eso quedaría lista la clausura) *)
+    @ getIAdd (getReg getRAX) (getConst 5L) (* Taggeamos la clausura. *)
     @ getIAdd (getReg getR15) (getConst (Int64.of_int (free_vars_length*8+24)))
     (*Fin de creación de la clausura*)
 
@@ -635,10 +629,58 @@ let rec add_free_vars_to_closure (free_vars_list : string list) (env : env) (acc
     @ restore_arguments_after_call arg_count 0
     
     
-                                                    
+  (*en recs tenemos una lista que es fun_label-id_list-body*)                             
+  | LetRec (recs,body,tag) -> 
+    let label,id_list,fun_body=List.nth recs 0 in (*lo haremos para el primero y despues generalizamos*)
+    let arg_count = List.length id_list in (*Cantidad de argumentos del lambda*)
+    let free_vars = (freeVars fun_body id_list []) in (* Listado de free_vars*)
+    let free_vars_length = List.length free_vars in
+    let space_in_stack = Int64.of_int (8 * (free_vars_length)) in (*calculo del espacio que se tiene que anadir en el stack*)
+    let self_env , _ = add (sprintf "self_id_%i" tag) [] ArgKind in (*Nuevo ambiente para compilar el cuerpo de lambda, primero solo con el self*)
+    let arg_env = add_list id_list self_env ArgKind in (*Nuevo ambiente con el self y los argumentos del lambda*)
+    let new_env = add_list free_vars arg_env LocalKind in (*Nuevo ambiente con el self, argumentos del lambda y las freevars*)
+    let slots_list = get_slots new_env (free_vars_length) in  (*Obtengo los slots de stack las free-vars añadidas al ambiente*)
+    let loading_of_stack = load_free_vars_to_stack slots_list 32  in (*Carga el stack con las free_vars usando los slots obtenidos buscando en la clausura desde + 32*)
+    let count_of_var = Int64.of_int (16* 16 * (var_count fun_body)) in (*Calculo de espacio para variables locales*)
+    let add_free_vars_to_closure = (add_free_vars_to_closure free_vars env 32) in (*Ahora las variables libres se colocan desde la posicion 32*)
 
+    getIJmp (sprintf "%s_end" label)
+    @ getILabel (sprintf "%s" label)
+    @ getIPush (getReg getRBP) (*comienzo de prologo*)
+    @ getIMov (getReg getRBP) (getReg getRSP) (*fin de prologo*)
+    @ getISub (getReg getRSP) (getConst space_in_stack) (*Espacio en el stack para closed-over vars*)
+    @ getIMov (getReg getR11) (getReg getRDI) (*Cargo el self argument*)
+    @ getISub (getReg getR11) (getConst 5L) (*Untag del self*)
+    
+    @ getIMov (getReg getRAX) (getRegOffset getR11 "+" 16) (*Cargo Manualmente el self desde la clasura al stack*)
+    @ getIMov (getRegOffset getRBP "-" (8*1)) (getReg getRAX) (*Lo coloco en la primera posición del stack*)
+    
+    @ loading_of_stack (*Cargo en el stack las free_vars desde la clausura*)
+    @ getISub (getReg getRSP) (getConst count_of_var) (*Hago espacio para variables locales*)
+    @ compile_expr fun_body new_env funenv (arg_count + 1) (*Compilo el cuerpo del lambda*)
+    @ getIMov (getReg getRSP) (getReg getRBP)
+    @ getIPop (getReg getRBP)
+    @ getIRet
+    @ getILabel (sprintf "%s_end" label)
+    
+    (*Comienzo de creacion de la clausura*)
+    @ getIMov (getReg getR11) (getConst (Int64.of_int arg_count))
+    @ getIMov (getRegOffset getR15 "+" 0) (getReg getR11) (*Colocamos aridad *)
+    @ getIMov (getReg getR11) (getILabelArg (sprintf "%s" label)) (*Ahora cargamos el label real a la clausura*)
+    @ getIMov (getRegOffset getR15 "+" 8) (getReg getR11) (*Colocamos el label/code pointer*)
+    @ getIMov (getRegOffset getR15 "+" 16) (getReg getR15) (*Colocamos puntero a self*)
+    @ getIMov (getReg getR11) (getConst (Int64.of_int free_vars_length))
+    @ getIMov (getRegOffset getR15 "+" 24) (getReg getR11) (*Colocamos la cantidad de variable libres*)
+    @ add_free_vars_to_closure (*Agregamos las variables libres a la clausura*)
+    @ getIMov (getReg getRAX) (getReg getR15) (*Dejo la clausura creada en RAX para asi devolverla*)
+    @ getIAdd (getReg getRAX) (getConst 5L) (* Taggeamos la clausura. *)
+    @ getIAdd (getReg getR15) (getConst (Int64.of_int (free_vars_length*8+24)))
+    (*Fin de creación de la clausura*)
 
-  | _ -> failwith("Falta implementar LetRec y los Records :(")
+                    
+     
+
+  | _ -> failwith("Falta implementarRecords :(")
 
     
       
