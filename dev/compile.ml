@@ -386,16 +386,6 @@ let rec freeVars (expr : tag expr) (vars_in_scope : string list) (free_vars_list
     else []
 
 
-
-    (* mov RAX, [RBP + 32]          ;; \ copy x from argument
-    mov [R15 + 24], RAX          ;; / into closure
-    mov RAX, [RBP + 40]          ;; \ copy z from argument
-    mov [R15 + 32], RAX *)
-
-  
-
-
-
   (*Carga en el stack las free-vars desde la clausura. Las coloca en la posición correcta en el stack usando slot_list*)
   let rec load_free_vars_to_stack (slot_list : int list) (accum : int) : instruction list =
     match slot_list with
@@ -727,19 +717,7 @@ let rec add_free_vars_to_closure (free_vars_list : string list) (env : env) (acc
               @ [IPush(Reg(RAX))]
     | [] -> []
 
-    (*Evaluates args of a function. It recursively compiles the arg and prepares it for function call*)
-    (*If arg is from the first 6 arguments of the function, then it uses registers, else it pushes the argument to the stack*)
-    and arg_list_evaluator2 (arg_exp_list : tag expr list) (env : env) (count:int) (funenv : funenv) (arg_count : int)  =
-    match arg_exp_list with
-    | h::t ->
-      if count<6 (*if first 6 arguments, then move argument result to adequate argument register*)
-        then (arg_list_evaluator t env (count+1) funenv arg_count) 
-              @ compile_expr h env funenv arg_count 
-              @ [IMov(List.nth register_arguments count,Reg(RAX))]
-        else (arg_list_evaluator t env (count+1) funenv arg_count) (*else push argument result to stack*)
-              @ compile_expr h env funenv arg_count 
-              @ [IPush(Reg(RAX))]
-    | [] -> []
+    
 
     
 
