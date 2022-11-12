@@ -170,6 +170,8 @@ let rec interp expr env fenv =
     | Add -> liftIII ( Int64.add )  (interp e1 env fenv) (interp e2 env fenv)
     | And -> if bool_of_value (interp e1 env fenv) then
       BoolV (bool_of_value (interp e2 env fenv)) else BoolV false
+    | Or -> if bool_of_value (interp e1 env fenv) then
+      BoolV (bool_of_value (interp e2 env fenv)) else BoolV true
     | Lte -> liftIIB ( <= ) (interp e1 env fenv) (interp e2 env fenv)
     | Lt -> liftIIB ( < ) (interp e1 env fenv) (interp e2 env fenv)
     | Sub -> liftIII (Int64.sub) (interp e1 env fenv) (interp e2 env fenv)
@@ -228,7 +230,7 @@ let rec interp expr env fenv =
     let env = extend_env names closures env in
     env_box := env ;
     interp body env fenv
-
+| _ -> failwith ("Invalid operation")
 let interp_prog prog env =
   let defs, expr = prog in
   let fenv = defs_prelude @ defs in

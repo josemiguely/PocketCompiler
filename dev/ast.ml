@@ -101,15 +101,32 @@ let tag (e : 'a expr) : tag expr =
       let (tag_lambda,next_tag_1) = help lambda (cur+1) in
       let (tag_list_arg, next_tag_2) = (tag_list arg_list (next_tag_1)) in
       (LamApply (tag_lambda,tag_list_arg,cur),next_tag_2)     
-    | LetRec(_,_,_) -> failwith("Falta tag de LetRec")
-    
-      (*
-      let (tag_e, next_tag) = 
-      help (hd e) (cur + 1) in 
-      (Apply (name,tag_e,cur),next_tag)
-        *)
-      
-      (*  *)
+    | LetRec(fun_list,expr,_) -> 
+      let (tag_fun_list,next_tag_1) = fun_tags fun_list (cur+1) in 
+      let (tag_expr,next_tag_2) = help expr next_tag_1 in 
+      (LetRec (tag_fun_list,tag_expr,cur), next_tag_2)
+
+    (*
+    ( letrec ( 
+          ( IDENTIFIER 
+            ( lambda ( IDENTIFIER ... ) ‹expr› )) 
+            ... )
+    ‹expr› )
+
+*)
+      and fun_tags (fun_list : (string * string list * 'a expr) list) (cur : tag): ((string * string list * tag expr) list * tag) =
+      match fun_list with 
+        | h::t -> 
+          (match h with
+          | (id , str_list,expr) ->  let (tag_expr,next_tag) = help expr (cur) in
+                                     let (tag_tail, res_tag) = fun_tags t next_tag in 
+                                    ([(id,str_list,tag_expr)] @ tag_tail, res_tag))
+        | [] -> ([],cur)
+
+
+
+
+
       and tag_list (expr_list:'a expr list) (cur : tag) :  (tag expr list * tag) =
       match expr_list with
       | h::t -> 
