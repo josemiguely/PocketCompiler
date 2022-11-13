@@ -20,8 +20,6 @@ type 'a expr =
   | Apply of string * 'a expr list * 'a
   | Tuple of 'a expr list * 'a
   | Set of 'a expr  * 'a expr  * 'a expr * 'a
-  | RecordId of string * 'a expr list * 'a (*Es Constructor de Records ya declarados ej: si existe point3d entonces -> (point3d)*)
-  | RecordIdFieldId of string * 'a expr * 'a (*Es para acceder a un elemento en concreto creo algo como: (point3d-x (point3d 1 1 1))*)
   | Lambda of string list * 'a expr * 'a
   | LamApply of 'a expr * 'a expr list * 'a (* Lamba expr is applied to list of arguments*)
   | LetRec of (string * string list * 'a expr) list * 'a expr * 'a
@@ -38,18 +36,12 @@ type ctype =
 type fundef =
   | DefFun of string * string list * tag expr (*Name of function, Name of arguments, Expression*)
   | DefSys of string * ctype list * ctype
-  | Record of string list (*a RecordId and multiple fieldIds*)
-
-(* type decl =
-| Record of string list (*a RecordId and multiple fieldIds*)
-| DefFun of string * string list * tag expr (*Name of function, Name of arguments, Expression*)
-| DefSys of string * ctype list * ctype *)
-
+  
 let fundef_name (f : fundef) : string =
   match f with
   | DefFun (n, _, _) -> n
   | DefSys (n, _, _) -> n
-  | _ -> failwith("Not a function")
+  
 
 (* Program including definitions and a body *)
 type prog = fundef list * (tag expr)
@@ -90,10 +82,6 @@ let tag (e : 'a expr) : tag expr =
     | Apply (name, e, _) -> (
       let (tag_list_expr,next_tag)= (tag_list e (cur+1)) in
       (Apply (name, tag_list_expr ,cur), next_tag))
-    | RecordId (id,expr_list,_) -> 
-      let (tag_list_exp, next_tag) = (tag_list expr_list (cur+1)) in 
-      (RecordId (id,tag_list_exp,cur),next_tag)
-    | RecordIdFieldId (id,expr,_) -> (RecordIdFieldId (id,expr,cur),cur+1)
     | Lambda(id_list,body,_) -> 
       let (tag_body,next_tag_1) = help body (cur+1) in
       (Lambda(id_list,tag_body,cur),next_tag_1)
@@ -106,14 +94,7 @@ let tag (e : 'a expr) : tag expr =
       let (tag_expr,next_tag_2) = help expr next_tag_1 in 
       (LetRec (tag_fun_list,tag_expr,cur), next_tag_2)
 
-    (*
-    ( letrec ( 
-          ( IDENTIFIER 
-            ( lambda ( IDENTIFIER ... ) ‹expr› )) 
-            ... )
-    ‹expr› )
-
-*)
+    
       and fun_tags (fun_list : (string * string list * 'a expr) list) (cur : tag): ((string * string list * tag expr) list * tag) =
       match fun_list with 
         | h::t -> 
@@ -138,10 +119,8 @@ let tag (e : 'a expr) : tag expr =
 
       in
       
-  let (tagged, _) = help e 1 in tagged;;(*
-let ayuda (list : 'a expr) : tag expr =
-  let curr = 0 
-  List.map (fun l -> let (a,b) = (help l curr)) list *)
+  let (tagged, _) = help e 1 in tagged;;
+
 (* Pretty printing - used by testing framework *)
 let rec string_of_expr(e : tag expr) : string = 
 
@@ -171,8 +150,6 @@ let rec string_of_expr(e : tag expr) : string =
   | Apply (fe, ael,_) -> sprintf "(%s %s)" fe (String.concat " " (List.map string_of_expr ael))
   | Tuple (exprs,_) -> sprintf "(tup %s)" (string_of_exprs exprs) 
   | Set (e, k, v,_) -> sprintf "(set %s %s %s)" (string_of_expr e) (string_of_expr k) (string_of_expr v)
-  | RecordId (id,expr_list,_)-> sprintf "(%s %s)" (id) (string_of_exprs expr_list) (*Checkear esto, probablemente muy malo*)
-  | RecordIdFieldId (id,expr,_) -> sprintf "(%s %s)" (id) (string_of_expr expr) (*Checkear esto, probablemente muy malo*)
   | Lambda (params, body,_) -> sprintf "(lambda (%s) %s)" (String.concat " " params) (string_of_expr body)
   | LamApply (fe, ael,_) -> sprintf "(%s %s)" (string_of_expr fe) (String.concat " " (List.map string_of_expr ael))
   | LetRec (recs, body,_) -> sprintf "(letrec (%s) %s)" (String.concat " " (List.map (
@@ -204,17 +181,16 @@ match t with
 
 
 (* Pretty printing function definitions - used by testing framework *)
-(* let string_of_fundef(d : fundef) : string =
+let string_of_fundef(d : fundef) : string =
   match d with
   | DefFun (name, arg_ids, body) -> sprintf "(def (%s %s) %s)" name (String.concat " " arg_ids) (string_of_expr body)
-  | DefSys (name, arg_types, ret_type) -> sprintf "(defsys %s %s -> %s)" name (String.concat " " (List.map string_of_ctype arg_types)) (string_of_ctype ret_type) *)
+  | DefSys (name, arg_types, ret_type) -> sprintf "(defsys %s %s -> %s)" name (String.concat " " (List.map string_of_ctype arg_types)) (string_of_ctype ret_type)
 
 
 let string_of_decl (d : fundef) : string =
   match d with
   | DefFun (name, arg_ids, body) -> sprintf "(def (%s %s) %s)" name (String.concat " " arg_ids) (string_of_expr body)
   | DefSys (name, arg_types, ret_type) -> sprintf "(defsys %s %s -> %s)" name (String.concat " " (List.map string_of_ctype arg_types)) (string_of_ctype ret_type)
-  | _ -> failwith("string of record")
 
 (* Pretty printing a program - used by testing framework *)
 let string_of_prog(p : prog) : string =

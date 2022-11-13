@@ -191,8 +191,7 @@ let rec interp expr env fenv =
       interp body (extend_env params vals env) fenv
     | DefSys (_, arg_types, ret_type) ->
       check_arity name (List.length arg_types) received_count ;
-      check_type ret_type @@ interp_sys name (List.map2 check_type arg_types vals)
-    | _ -> failwith ("FALTA RECORD"))
+      check_type ret_type @@ interp_sys name (List.map2 check_type arg_types vals))
   | Tuple (exprs,_) -> 
           TupleV (List.map (fun e -> (ref (interp e env fenv))) exprs)
   | Set (e,k,v,_) ->
@@ -230,7 +229,7 @@ let rec interp expr env fenv =
     let env = extend_env names closures env in
     env_box := env ;
     interp body env fenv
-| _ -> failwith ("Invalid operation")
+
 let interp_prog prog env =
   let defs, expr = prog in
   let fenv = defs_prelude @ defs in

@@ -38,25 +38,6 @@ void tuple_print_res(VAL * addrcount,VAL count){
     printf(")");
 
 }
-// Recibe una clausura 
-// void tuple_clousure_res(VAL * addrcount,VAL count){
-//     // printf("count esss = %lu\n",count);
-//     if (count==0){
-//       printf("(cl");
-//     }
-//     else{
-//     printf("(cl ");
-//     }
-//     for (int i=1;i<count+1;i++){
-//     print_res(*(addrcount+i));
-//     if (i<count){
-//     printf(" ");
-//     }
-//      }
-//     printf(")");
-
-// }
-
 
 VAL print_res(VAL val) {
  
@@ -86,8 +67,7 @@ VAL print_res(VAL val) {
     else if ((val & TUPLE_TAG) == 1){
       VAL* addrcount= (VAL*) (val-(VAL)1);
       VAL count= *addrcount;
-      // printf("count = %#018x\n",count);
-      // printf("primer valor %#018x\n",*(addrcount+1));
+      
       
       tuple_print_res(addrcount,count); // Se le entrega addr y cantidad de tuplas
       
@@ -131,10 +111,9 @@ void check_overflow_add (VAL a, VAL b){
 
 void check_overflow_sub (VAL a, VAL b){
 
-  // printf("a = %ld\n",(int64_t)a/2);
-  // printf("b = %ld\n",(int64_t)b/2);
+  
   if(*safe_type == '2'){
-  // printf("safe type");
+ 
     
     if ((int64_t)a/2 > MAXINT + (int64_t)b/2){
       printf("Arithmetic error: - produced an overflow");
@@ -174,8 +153,6 @@ void check_overflow_mul (VAL a, VAL b){
     
   else{
 
-    //if (a2 > 0)
-    //   a2 = a2*-1;
 
     if (b2 < 0){
       b2 = b2*-1;
@@ -220,14 +197,14 @@ void error(int errCode, VAL val){
    if (errCode == ERR_NOT_NUMBER){
     printf("Type error: Expected integer, but got ");
     print_res(val);
-    // printf("\n");
+  
     
   }
 
   else if (errCode == ERR_NOT_BOOLEAN){
     printf("Type error: Expected boolean, but got ");
     print_res(val);
-    // printf("\n");
+  
   }
 
   else if (errCode == ERR_NOT_TUPLE){
@@ -256,20 +233,17 @@ void tuple_index_error (VAL* tuple,int index){
 }
 
 void closure_arity_mismatch (int expected_arity,int arity){
- // int count= *(closure);
+
   printf("Arity mismatch: closure expected %i arguments but got %i",expected_arity,arity);
-//   VAL count = *(tuple);
-//   tuple_print_res(closure,count);
+
   exit(-1);
 }
 
 
 int main(int argc, char** argv) {
-  // printf("Hola mundo Main");
   char *SAFE = getenv("SAFE");
 
   uint64_t* HEAP = calloc(1024, sizeof(uint64_t)); // Allocate 8KB of memory for now
-  //print(result);
   
  
   if (SAFE){
@@ -282,7 +256,6 @@ int main(int argc, char** argv) {
 
   
   u64 result = our_code_starts_here(HEAP);
-  // printf("devuelve result");
   print_res(result);
   free(HEAP);
   return 0;

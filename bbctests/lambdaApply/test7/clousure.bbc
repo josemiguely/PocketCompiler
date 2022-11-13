@@ -1,5 +1,5 @@
-NAME: A lambda apply with a def doesnt share namespace
-DESCRIPTION: evaluates a lambda that doesnt share namespace with top level env
+NAME: A complex use of lambda apply
+DESCRIPTION: evaluates multiple lambdas apply
 SRC:
 (let (foo (lambda (w x y z) 
                 (lambda (a) 

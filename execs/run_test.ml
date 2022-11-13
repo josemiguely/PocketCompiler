@@ -31,9 +31,6 @@ let test_parse_tuple () =
 let test_parse_empty_tuple () =
     check exp "empty tuple" (parse_exp (`List [`Atom "tup"])) (Tuple([],-1) )
 
-let test_parse_empty_tuple () =
-    check exp "empty tuple" (parse_exp (`List [`Atom "tup"])) (Tuple ([],-1) )
-
 let test_parse_add1 () =
   check exp "increment applies" 
   (parse_exp (`List [`Atom "add1" ; `Atom "1"])) 

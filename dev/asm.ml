@@ -75,8 +75,6 @@ let pp_arg arg : string =
   | Reg r -> pp_reg r
   | RegOffset (reg,operation,slot) -> sprintf "[%s %s %s]" (pp_reg reg) (operation) (string_of_int slot)
   | ILabelArg (id) -> sprintf "%s" (id)
-  (* | RegOffsetRR (reg,operation,reg2) -> sprintf "[%s %s %s]" (pp_reg reg) (operation) (pp_reg reg2) *)
-
 
 (** Transforms ASM instruction list to string*)
 let rec asm_to_string (asm : instruction list) : string =

@@ -1,5 +1,5 @@
-NAME: A lambda apply with 2 arguments
-DESCRIPTION: evaluates a lambda with multiple arguments
+NAME: A let with inner lambda
+DESCRIPTION: evaluates a lambda apply inside of a let
 SRC:
 (let (f (@ (lambda (a) (lambda (b) (+ a b))) 10))
    (@ f 2))
