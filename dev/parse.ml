@@ -18,6 +18,7 @@ let rec parse_exp (sexp : sexp) : tag expr =
   match sexp with
   | `Atom "true" -> Bool (true,-1)
   | `Atom "false" -> Bool (false,-1)
+  | `List [`Atom "(tup)"] -> Tuple ([],-1)
   | `Atom s -> (
     match Int64.of_string_opt s with Some n -> Num (n,-1) | None -> Id (s,-1) )
   | `List (`Atom "tup" :: exprs) -> Tuple (List.map parse_exp exprs,-1)

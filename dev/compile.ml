@@ -503,12 +503,35 @@ let rec add_free_vars_to_closure (free_vars_list : string list) (env : env) (acc
   | Tuple(expr_list,_) -> 
     (*Nmero de expresiones en la tupla*)
     let expr_number = List.length expr_list in
-    if expr_number==0 then
-        getIMov (getReg (getR10)) (getConst (Int64.of_int expr_number))
-      @ getIMov (getRegOffset (getR15) "+"  ((8*0))) (getReg getR10) 
-      @ (add_tuple_to_heap [] 0 expr_number)
+    if expr_number==0 then (*Caso cuando la tupla es vacia*)
+        
+        
+        (*llamado a try_gc*)
+        getIPush (getReg getRCX)
+        @ getIPush (getReg getRDX)
+        @ getIPush (getReg getRSI)
+        @ getIPush (getReg getRDI)
+        @ getIMov (getReg getRDI) (getReg getR15) (*Se coloca alloc ptr*)
+        @ getIMov (getReg getRSI) (getConst 1L) (*Se coloca espacio solicitado, para la tupla vacia solo 1 espacio*)
+        @ getIMov (getReg getRDX) (getReg getRBP) (*Se coloca base pointer*)
+        @ getIMov (getReg getRCX) (getReg getRSP) (*Se coloca stack pointer*)
+        @ getICall ("try_gc") 
+        @ getIPop (getReg getRDI)
+        @ getIPop (getReg getRSI)
+        @ getIPop (getReg getRDX)
+        @ getIPop (getReg getRCX)
+        
+        (*Coloco nuevo puntero de try_gc a R15*)
+        @ getIMov (getReg getR15) (getReg getRAX)
+
+        (*fin de llamado a try_gc*)
+
+        @ getIMov (getReg (getR10)) (getConst (Int64.of_int expr_number))
+        @ getIMov (getRegOffset (getR15) "+"  ((8*0))) (getReg getR10) 
+        @ (add_tuple_to_heap [] 0 expr_number)
     
-    else
+    else (*Cuando la tupla no es vacia*)
+
       let env_slot =(generate_list_env_slot expr_list env) in
       let finalenv = (fst (List.nth env_slot  (expr_number-1))) in
       let compiled = 
@@ -518,6 +541,31 @@ let rec add_free_vars_to_closure (free_vars_list : string list) (env : env) (acc
           res @ (getIMov (getRegOffset (getRBP) "-" (8*slot))(getReg(getRAX)))) expr_list env_slot ) in
       let compiled_folded = (List.fold_left (fun x y-> x @ y) [] compiled) in
       compiled_folded 
+      
+      
+      
+      (*llamado a try_gc*)
+      
+      @ getIPush (getReg getRCX)
+      @ getIPush (getReg getRDX)
+      @ getIPush (getReg getRSI)
+      @ getIPush (getReg getRDI)
+      @ getIMov (getReg getRDI) (getReg getR15) (*Se coloca alloc ptr*)
+      @ getIMov (getReg getRSI) (getConst (Int64.of_int expr_number)) (*Se coloca espacio solicitado*)
+      @ getIMov (getReg getRDX) (getReg getRBP) (*Se coloca base pointer*)
+      @ getIMov (getReg getRCX) (getReg getRSP) (*Se coloca stack pointer*)
+      @ getICall ("try_gc") 
+      @ getIPop (getReg getRDI)
+      @ getIPop (getReg getRSI)
+      @ getIPop (getReg getRDX)
+      @ getIPop (getReg getRCX)
+      
+      (*Coloco nuevo puntero de try_gc a R15*)
+      @ getIMov (getReg getR15) (getReg getRAX)
+
+      (*fin de llamado a try_gc*)
+      
+      
       @ getIMov (getReg (getR10)) (getConst (Int64.of_int expr_number))
       @ getIMov (getRegOffset (getR15) "+"  ((8*0))) (getReg getR10) (*size de la tupla*)
       @ (add_tuple_to_heap env_slot 0 expr_number) (*Añado el resto de la tupla a HeapPointer y devuelvo Pointer*)
@@ -534,6 +582,7 @@ let rec add_free_vars_to_closure (free_vars_list : string list) (env : env) (acc
     let loading_of_stack = load_free_vars_to_stack slots_list 24  in (*Carga  del stack las free_vars con los slots obtenidos*)
     let count_of_var = Int64.of_int (16* 16 * (var_count body)) in (*Calculo de espacio para variables locales*)
     let add_free_vars_to_closure = (add_free_vars_to_closure free_vars env 24) in
+    let space_for_try_gc = 4 + free_vars_length in (* el espacio es : 4 = aridad, code pointer, num var libres + variables libres en total *)
      getIJmp (sprintf "lambda_id_%i_end" tag)
     @ getILabel (sprintf "lambda_id_%i" tag)
     @ getIPush (getReg getRBP) (*comienzo de prologo*)
@@ -550,6 +599,30 @@ let rec add_free_vars_to_closure (free_vars_list : string list) (env : env) (acc
     @ getILabel (sprintf "lambda_id_%i_end" tag)
     
     (*Comienzo de creacion de la clausura*)
+
+    (*llamado a try_gc*)
+      
+    @ getIPush (getReg getRCX)
+    @ getIPush (getReg getRDX)
+    @ getIPush (getReg getRSI)
+    @ getIPush (getReg getRDI)
+    @ getIMov (getReg getRDI) (getReg getR15) (*Se coloca alloc ptr*)
+    @ getIMov (getReg getRSI) (getConst (Int64.of_int space_for_try_gc)) (*Se coloca espacio solicitado*)
+    @ getIMov (getReg getRDX) (getReg getRBP) (*Se coloca base pointer*)
+    @ getIMov (getReg getRCX) (getReg getRSP) (*Se coloca stack pointer*)
+    @ getICall ("try_gc") 
+    @ getIPop (getReg getRDI)
+    @ getIPop (getReg getRSI)
+    @ getIPop (getReg getRDX)
+    @ getIPop (getReg getRCX)
+    
+    (*Coloco nuevo puntero de try_gc a R15*)
+    @ getIMov (getReg getR15) (getReg getRAX)
+
+    (*fin de llamado a try_gc*)
+
+
+
     @ getIMov (getReg getR11) (getConst (Int64.of_int arg_count))
     @ getIMov (getRegOffset getR15 "+" 0) (getReg getR11) (*Colocamos aridad *)
     @ getIMov (getReg getR11) (getILabelArg (sprintf "lambda_id_%i" tag))
@@ -735,7 +808,7 @@ let rec compile_list_decl (decl_list:fundef list) (fun_env : funenv) : (string *
   | [] -> ("",fun_env) 
 
 let extern_list = 
-  ["error";"print";"check_overflow_add";"check_overflow_sub";"check_overflow_mul";"check_non_zero_denominator";"tuple_index_error";"closure_arity_mismatch"]
+  ["error";"print";"check_overflow_add";"check_overflow_sub";"check_overflow_mul";"check_non_zero_denominator";"tuple_index_error";"closure_arity_mismatch";"try_gc";"set_stack_bottom"]
 
 
 let rec extern_functions (s:string list): string =
@@ -783,10 +856,13 @@ let prologue ="  mov RSP, RBP
  
 (*Heap initializer ensures that provided address is multiple of 8*)
 let heap_initializer =
-  asm_to_string ((getIMov (getReg getR15) (getReg getRDI)) @ 
-  (getIAdd (getReg getR15) (getConst 7L)) @
-  (getIMov (getReg getR11) (getConst  0xfffffffffffffff8L)) @ 
-  (getIAnd (getReg getR15) (getReg getR11)))
+  asm_to_string ((getIMov (getReg getR15) (getReg getRDI)) 
+  @ (getIAdd (getReg getR15) (getConst 7L)) 
+  @ (getIMov (getReg getR11) (getConst  0xfffffffffffffff8L)) 
+  @ (getIAnd (getReg getR15) (getReg getR11))
+  @ (getIMov (getReg getRDI) (getReg getRBP))
+  @ (getICall ("set_stack_bottom"))
+  )
   
 
 let prelude (vars: int): string =

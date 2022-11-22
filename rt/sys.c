@@ -26,6 +26,7 @@ const VAL BOOL_TRUE =       0xffffffffffffffff;
 const VAL BOOL_FALSE =      0x7fffffffffffffff; // as chosen in compile.ml
 const VAL TUPLE_TAG = 0x1;
 const VAL CLOSURE_TAG = 0x5;
+const VAL FORWARDED_TAG = 0x7;
 
 char safe_type[2];
 
@@ -77,8 +78,8 @@ VAL print_res(VAL val) {
 
   
     else if ((val & TUPLE_TAG) == 1){
-      VAL* addrcount= (VAL*) (val-(VAL)1);
-      VAL count= *addrcount;
+      VAL* addrcount= (VAL*) (val-(VAL)1);//Le sacamos el tag y conseguimos el puntero
+      VAL count= *addrcount; // En la primera posición del puntero tenemos la cantidad de elementos en la tupla
       
       
       tuple_print_res(addrcount,count); // Se le entrega addr y cantidad de tuplas
@@ -269,14 +270,26 @@ bool is_heap_ptr(u64 val){
   return (u64*)val < HEAP_END && (u64*)val >= HEAP_START;
 }
 
+
+bool is_tuple(u64 val){
+  return (val & TUPLE_TAG) == 1;
+}
+
+bool is_closure(u64 val){
+  return (val & CLOSURE_TAG) == 5;
+}
+
+
 void print_stack(u64* rbp, u64* rsp) {
   printf("|------- frame %p to %p  ------\n", rsp, rbp);
   for (u64* cur_word = rsp; cur_word < rbp; cur_word++) {
     u64 val = (u64)*cur_word;
     printf("| %p: %p", cur_word, (u64*)*cur_word);
     if (is_heap_ptr(val)) {
-      if (is_tuple(val)){ printf(" (tuple)"); }
-      else if (is_closure(val)){ printf(" (closure)"); }
+      //if (is_tuple(val)){ printf(" (tuple)"); }
+      //else if (is_closure(val)){ printf(" (closure)"); }
+      if (is_closure(val)){ printf(" (closure)"); }
+      else if (is_tuple(val)){ printf(" (tuple)"); }
     }
     printf("\n");
   }
@@ -291,7 +304,7 @@ void print_stack(u64* rbp, u64* rsp) {
 void print_heap(u64* heap_start, u64* heap_end){
   printf("| Heap from %p to %p\n", heap_start, heap_end);
   for (u64 i = 0; i <= (u64)(heap_end - heap_start); i++) {
-    printf("|  %lld/%p: %p \n", i, (heap_start + i), (u64*)*(heap_start + i));
+    printf("|  %lu/%p: %p \n", i, (heap_start + i), (u64*)*(heap_start + i));
   }
 }
 
@@ -305,27 +318,69 @@ void print_heaps(){
 
 
 u64* collect(u64* cur_frame, u64* cur_sp) {
+  
   /* TBD: see https://en.wikipedia.org/wiki/Cheney%27s_algorithm */
   // swap from-space to-space
+  u64* temp = FROM_SPACE;
+  FROM_SPACE = TO_SPACE;
+  TO_SPACE = temp;
   // init spaces
+
+  ALLOC_PTR = TO_SPACE;
+  SCAN_PTR = TO_SPACE;
   // scan stack and copy roots
+  for (u64* cur_word = cur_sp; cur_word < cur_frame; cur_word++) {
+    u64 val = (u64)*cur_word;
+
+    //Si es clausura entonces encontramos raiz que referencia al heap, entonces debemos copiarla
+    if (is_closure((VAL) val)){
+      printf("hacer que ponga toda la clausura en tospace");
+    }
+  
+   //Si es tupla entonces encontramos raiz que referencia al heap, entonces debemos copiarla
+   if(is_tuple((VAL) val)){
+
+      //(FROM_SPACE + val) =
+
+      VAL* addrcount= (VAL*) (val-(VAL)1);//Le sacamos el tag y conseguimos el puntero
+      VAL count= *addrcount; // En la primera posición del puntero tenemos la cantidad de elementos en la tupla
+
+
+      for (int i=0;i<count;i++){
+        VAL tup_val=*(addrcount+i);
+
+      }
+
+
+    
+    
+  }
+
+    
+    printf("\n");
+  }
+
   // scan objects in the heap
+
+
   // clean old space
   return ALLOC_PTR;
 }
 
 /* trigger GC if enabled and needed, out-of-memory error if insufficient */
 u64* try_gc(u64* alloc_ptr, u64 words_needed, u64* cur_frame, u64* cur_sp) {
-  if (USE_GC==1 && alloc_ptr + words_needed > FROM_SPACE + HEAP_SIZE) {
-    printf("| need memory: GC!\n");
-    alloc_ptr = collect(cur_frame, cur_sp);
-  }
-  if (alloc_ptr + words_needed > FROM_SPACE + HEAP_SIZE) {
-    printf("| Error: out of memory!\n\n");
-    print_stack(cur_frame, cur_sp);
-    print_heaps();
-    exit(-1);
-  }
+  //printf("AAAA TRY_GC\n");
+  // if (USE_GC==1 && alloc_ptr + words_needed > FROM_SPACE + HEAP_SIZE) {
+  //   printf("| need memory: GC!\n");
+  //   alloc_ptr = collect(cur_frame, cur_sp);
+  // }
+  // if (alloc_ptr + words_needed > FROM_SPACE + HEAP_SIZE) {
+  //   printf("| Error: out of memory!\n\n");
+  //   print_stack(cur_frame, cur_sp);
+  //   print_heaps();
+  //   exit(-1);
+  // }
+  //printf("TERMINA TRY_GC\n");
   return alloc_ptr;
 }
 
@@ -358,13 +413,13 @@ int main(int argc, char** argv) {
   //uint64_t* HEAP = calloc(1024, sizeof(uint64_t)); // Allocate 8KB of memory for now
  
   /* setting up two space heap for GC */
-  u64* heap = (u64*)calloc((HEAP_SIZE * 2) + 15, sizeof(u64));
-  HEAP_START = (u64*)(((u64)heap + 15) & ~0xF);
+  u64* heap = (u64*)calloc((HEAP_SIZE * 2) + 7, sizeof(u64));
+  HEAP_START = (u64*)(((u64)heap + 7) & ~0x7);
   /* TBD: initialize HEAP_MID, HEAP_END, FROM_SPACE, TO_SPACE */
-  HEAP_MID = 0;   /* TBD */
-  HEAP_END = 0;   /* TBD */
+  HEAP_MID = HEAP_START + HEAP_SIZE;   /* TBD */
+  HEAP_END = HEAP_START + HEAP_SIZE*2;   /* TBD */
   FROM_SPACE = 0; /* TBD */
-  TO_SPACE = 0;   /* TBD */
+  TO_SPACE = HEAP_MID;   /* TBD */
  
   if (SAFE){
      strcpy(safe_type,SAFE);
