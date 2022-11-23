@@ -354,56 +354,73 @@ VAL size(VAL val){
 
   if(is_tuple((VAL) val)){
 
-    VAL* pointer= (VAL*) (val); //Untaggeamos la clausura
+    VAL* pointer= (VAL*) (val); //Untaggeamos la tupla
     VAL size_of_tuple= *(pointer);
 
     return 1+size_of_tuple;
     
   }
 
-  return 0; // Si es un booleano o un numero su tamaño es 0.
+  return 1; // Si es un booleano o un numero su tamaño es 1 m creo que este caso nunca deberia pasar.
 
 }
 
 
-u64* copy(VAL val){
+u64* copy(VAL o){
     
-    if (!is_forwarded(val)){
+    if (!is_forwarded(o)){
     
     //Si es clausura entonces encontramos raiz que referencia al heap, entonces debemos copiarla
-    if (is_closure((VAL) val)){
-        VAL* closure=( (VAL *) val-5); // Le sacamos el tag
+    if (is_closure((VAL) o)){
+        VAL* closure=( (VAL *) o-5); // Le sacamos el tag
+        
+
+        if (is_forwarded(*closure)){
+          return (*closure - FORWARDED_TAG);
+        }
+
 
         u64* alloc_temp= ALLOC_PTR;
-        ALLOC_PTR += size(val);
+        ALLOC_PTR += size(o);
         //copy from alloc to alloc_temp
-        for (int i=0;i<size(val);i++){
+        for (int i=0;i<size(o);i++){
           alloc_temp = (u64 *) *(closure + i);
           alloc_temp++;
         }
+
+        
+
         //forwarding-adress(o) = o'
-        * (u64 *)forwarding_adress(*closure) = alloc_temp;
+        //* (u64 *)forwarding_adress(*closure) = alloc_temp;
     }
   
     //Si es tupla entonces encontramos raiz que referencia al heap, entonces debemos copiarla
-    if(is_tuple((VAL) val)){
+    if(is_tuple((VAL) o)){
 
-        VAL* tuple=(val-1); // Le sacamos el tag
+        VAL* tuple=(o-1); // Le sacamos el tag
 
+        if (is_forwarded(*tuple)){
+          return (*tuple - FORWARDED_TAG);
+        }
+        u64* oprim= ALLOC_PTR;
         u64* alloc_temp= ALLOC_PTR;
-        ALLOC_PTR += size(val);
+        ALLOC_PTR += size(o);
         //copy from alloc to alloc_temp
-        for (int i=0;i<size(val);i++){
+        for (int i=0;i<size(o);i++){
           alloc_temp = (u64 *) *(tuple + i);
           alloc_temp++;
         }
         //forwarding-adress(o) = o'
-        * (u64 *)forwarding_adress(*tuple) = alloc_temp;
+        //* (u64 *)forwarding_adress(*tuple) = alloc_temp;
         
+      o=oprim+FORWARDED_TAG;
+
       }
     }
-
-    return forwarding_adress(val);
+    else{ // Es un forwarded, por lo que debemos devolver la dirección sin el tag de forwarded
+      return o - FORWARDED_TAG;
+    }
+    
 }
 
 
@@ -415,9 +432,7 @@ void scan_objects(){
         for (int i=0;i<size(o);i++){
           
           VAL r = *((VAL* )o+i);
-          if(is_closure(r) || is_tuple(r)){
             copy(r);
-          }
         }
         SCAN_PTR = SCAN_PTR + size(o);
   }
