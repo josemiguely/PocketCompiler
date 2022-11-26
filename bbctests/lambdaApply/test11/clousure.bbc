@@ -1,5 +1,6 @@
 NAME: A lambda apply passed as a argument to a def function
 DESCRIPTION: A lambda apply passed as a argument to a def function
+PARAMS: HEAP_SIZE=30,USE_GC=1
 SRC:
 (
   (def (fib n) (if (< n 1) 1 (+ (fib (+ n -1)) (fib (+ n -2)))))

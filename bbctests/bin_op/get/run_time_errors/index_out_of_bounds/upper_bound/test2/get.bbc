@@ -1,5 +1,6 @@
 NAME: get with a index greater than the tuple size
 DESCRIPTION: breaks with runtime error because the index is greater than the tuple size
+PARAMS: HEAP_SIZE=30, USE_GC=0
 SRC:
 (get (tup (tup 1 2 3) (tup 2 false) false true true (tup false (and false true))) 7)
 EXPECTED:

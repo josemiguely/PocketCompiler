@@ -1,0 +1,9 @@
+NAME: closure gc error out of memory
+DESCRIPTION: with HEAP_SIZE 16 and without GC, this fails. First lambda uses 3 spaces.
+PARAMS: HEAP_SIZE=2, USE_GC=0
+STATUS: fail
+SRC:
+(lambda ()
+    (+ 1 3)))
+EXPECTED:
+out of memory

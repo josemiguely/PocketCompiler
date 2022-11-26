@@ -1,0 +1,9 @@
+NAME: closure gc uses exact memory
+DESCRIPTION: with HEAP_SIZE 4. First lambda uses 4 spaces so doesnt fails using gc or not.
+PARAMS: HEAP_SIZE=4, USE_GC=0
+SRC:
+(let (x 2) 
+(lambda ()
+    (+ x 3))))
+EXPECTED:
+|ORACLE

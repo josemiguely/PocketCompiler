@@ -1,0 +1,15 @@
+NAME: A greater than HEAP_SIZE inner tuple with GC
+DESCRIPTION: with HEAP_SIZE 16 and with GC.
+PARAMS: HEAP_SIZE=16, USE_GC=1
+SRC:
+(
+
+(def (f) (let (x (tup 1 2 3 4 5 6 7 8 9 10 11 12 13 14))
+            (get x 1)))
+
+(let (y (f)) (get (tup 1 y 3) 1) ) 
+ 
+)
+
+EXPECTED:
+|ORACLE

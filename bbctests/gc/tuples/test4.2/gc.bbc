@@ -1,0 +1,10 @@
+NAME: Sum of tuples is greater than the HEAP_SIZE (GC ON)
+DESCRIPTION: with HEAP_SIZE 16 and with GC, this test fails eitherway.
+PARAMS: HEAP_SIZE=16,USE_GC=1
+STATUS: fail 
+SRC:
+(let (a (tup (tup 1 2) (tup 3 4) (tup 5 6) (tup 7 8) (tup 9 10) (tup 11 12)))
+    (get a 5)
+)
+EXPECTED:
+out of memory

@@ -1,0 +1,10 @@
+NAME: closure gc uses exact memory
+DESCRIPTION: with HEAP_SIZE 3. First lambda uses 4 spaces so fails without gc.
+PARAMS: HEAP_SIZE=3, USE_GC=0
+STATUS: fail
+SRC:
+(let (x 2) 
+(lambda ()
+    (+ x 3))))
+EXPECTED:
+out of memory

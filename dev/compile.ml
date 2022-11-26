@@ -52,6 +52,11 @@ let getRDX = RDX
 
 let getRCX = RCX
 
+let getR8 = R8
+
+let getR9 = R9
+
+
 let getR15 = R15
 
 let getR11 = R11
@@ -507,12 +512,14 @@ let rec add_free_vars_to_closure (free_vars_list : string list) (env : env) (acc
         
         
         (*llamado a try_gc*)
-        getIPush (getReg getRCX)
+        getIPush (getReg getR9)
+        @ getIPush (getReg getR8)
+        @ getIPush (getReg getRCX)
         @ getIPush (getReg getRDX)
         @ getIPush (getReg getRSI)
         @ getIPush (getReg getRDI)
         @ getIMov (getReg getRDI) (getReg getR15) (*Se coloca alloc ptr*)
-        @ getIMov (getReg getRSI) (getConst 1L) (*Se coloca espacio solicitado, para la tupla vacia solo 1 espacio*)
+        @ getIMov (getReg getRSI) (getConst 1L) (*Se coloca espacio solicitado, para la tupla vacia solo 1 espacio, el numero de elementos que es 0*)
         @ getIMov (getReg getRDX) (getReg getRBP) (*Se coloca base pointer*)
         @ getIMov (getReg getRCX) (getReg getRSP) (*Se coloca stack pointer*)
         @ getICall ("try_gc") 
@@ -520,6 +527,8 @@ let rec add_free_vars_to_closure (free_vars_list : string list) (env : env) (acc
         @ getIPop (getReg getRSI)
         @ getIPop (getReg getRDX)
         @ getIPop (getReg getRCX)
+        @ getIPush (getReg getR8)
+        @ getIPush (getReg getR9)
         
         (*Coloco nuevo puntero de try_gc a R15*)
         @ getIMov (getReg getR15) (getReg getRAX)
@@ -545,13 +554,14 @@ let rec add_free_vars_to_closure (free_vars_list : string list) (env : env) (acc
       
       
       (*llamado a try_gc*)
-      
+      @ getIPush (getReg getR9)
+      @ getIPush (getReg getR8)
       @ getIPush (getReg getRCX)
       @ getIPush (getReg getRDX)
       @ getIPush (getReg getRSI)
       @ getIPush (getReg getRDI)
       @ getIMov (getReg getRDI) (getReg getR15) (*Se coloca alloc ptr*)
-      @ getIMov (getReg getRSI) (getConst (Int64.of_int expr_number)) (*Se coloca espacio solicitado*)
+      @ getIMov (getReg getRSI) (getConst (Int64.of_int (expr_number + 1))) (*Se coloca espacio solicitado*)
       @ getIMov (getReg getRDX) (getReg getRBP) (*Se coloca base pointer*)
       @ getIMov (getReg getRCX) (getReg getRSP) (*Se coloca stack pointer*)
       @ getICall ("try_gc") 
@@ -559,6 +569,8 @@ let rec add_free_vars_to_closure (free_vars_list : string list) (env : env) (acc
       @ getIPop (getReg getRSI)
       @ getIPop (getReg getRDX)
       @ getIPop (getReg getRCX)
+      @ getIPush (getReg getR8)
+      @ getIPush (getReg getR9)
       
       (*Coloco nuevo puntero de try_gc a R15*)
       @ getIMov (getReg getR15) (getReg getRAX)
@@ -582,7 +594,7 @@ let rec add_free_vars_to_closure (free_vars_list : string list) (env : env) (acc
     let loading_of_stack = load_free_vars_to_stack slots_list 24  in (*Carga  del stack las free_vars con los slots obtenidos*)
     let count_of_var = Int64.of_int (16* 16 * (var_count body)) in (*Calculo de espacio para variables locales*)
     let add_free_vars_to_closure = (add_free_vars_to_closure free_vars env 24) in
-    let space_for_try_gc = 4 + free_vars_length in (* el espacio es : 4 = aridad, code pointer, num var libres + variables libres en total *)
+    let space_for_try_gc = 3 + free_vars_length in (* el espacio es : 3 = aridad, code pointer, num var libres + variables libres en total *)
      getIJmp (sprintf "lambda_id_%i_end" tag)
     @ getILabel (sprintf "lambda_id_%i" tag)
     @ getIPush (getReg getRBP) (*comienzo de prologo*)
@@ -601,7 +613,8 @@ let rec add_free_vars_to_closure (free_vars_list : string list) (env : env) (acc
     (*Comienzo de creacion de la clausura*)
 
     (*llamado a try_gc*)
-      
+    @ getIPush (getReg getR9)
+    @ getIPush (getReg getR8)
     @ getIPush (getReg getRCX)
     @ getIPush (getReg getRDX)
     @ getIPush (getReg getRSI)
@@ -615,6 +628,8 @@ let rec add_free_vars_to_closure (free_vars_list : string list) (env : env) (acc
     @ getIPop (getReg getRSI)
     @ getIPop (getReg getRDX)
     @ getIPop (getReg getRCX)
+    @ getIPush (getReg getR8)
+    @ getIPush (getReg getR9)
     
     (*Coloco nuevo puntero de try_gc a R15*)
     @ getIMov (getReg getR15) (getReg getRAX)
@@ -636,7 +651,7 @@ let rec add_free_vars_to_closure (free_vars_list : string list) (env : env) (acc
     @ getIAdd (getReg getR15) (getConst (Int64.of_int (free_vars_length*8+24)))
     (*Fin de creación de la clausura*)
 
-  | LamApply (lambda_expr,arg_list,_) -> 
+  | LamApply (lambda_expr,arg_list, _ ) -> 
     
     let arg_number = List.length arg_list in
     let instr = arg_list_evaluator arg_list env 1 funenv arg_count in (*First we eval Apply arguments*)
