@@ -1,0 +1,9 @@
+NAME: closure gc uses exact memory
+DESCRIPTION: with HEAP_SIZE 16. Withouth gc it gives a result
+PARAMS: HEAP_SIZE=16, USE_GC=1
+SRC:
+(let (x (lambda (y) (get (tup 1 2 3 4 5 6 7 8 9) y)))
+    (let (f (lambda (j) (get (tup 17 18 19 20) j)))
+        (+ (@ x 1) (@ f 3))))
+EXPECTED:
+|ORACLE
