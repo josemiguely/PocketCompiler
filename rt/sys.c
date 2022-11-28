@@ -36,7 +36,6 @@ VAL print_res(VAL);
 
 //Recibre addres y cantidad de tuplaws
 void tuple_print_res(VAL * addrcount,VAL count){
-    // printf("count esss = %lu\n",count);
     if (count==0){
       printf("(tup");
     }
@@ -67,10 +66,7 @@ VAL print_res(VAL val) {
 
       VAL* addrcount= (VAL*) (val-(VAL)5); //Untaggeamos la clausura
       VAL count= *(addrcount);
-      // printf("count = %#018x\n",count);
-      //printf("primer valor %#018x\n",*(addrcount+1));
-      
-      //printf("count = %ld", ((int64_t)(count))); // 
+
       printf("<clos:%ld>",(int64_t)(count));
       
       
@@ -79,11 +75,11 @@ VAL print_res(VAL val) {
 
   
     else if ((val & TUPLE_TAG) == 1){
-      //printf("VAL =  %#018x",val);
+      
       VAL* addrcount= (VAL*) (val-(VAL)1);//Le sacamos el tag y conseguimos el puntero
-      //printf("sacamos addr %p \n", (addrcount+1)) ;
+      
       VAL count= *addrcount; // En la primera posición del puntero tenemos la cantidad de elementos en la tupla
-      //printf("Count %i \n", count) ;
+      
       
       tuple_print_res(addrcount,count); // Se le entrega addr y cantidad de tuplas
       
@@ -122,7 +118,6 @@ void check_overflow_add (VAL a, VAL b){
     
   }
   
-
 }
 
 void check_overflow_sub (VAL a, VAL b){
@@ -286,7 +281,6 @@ bool is_closure (u64 val){
 }
 
 bool is_forwarded(VAL val){
-  //printf("estoy en es_forwarded\n");
   return (val & FORWARDED_TAG) == 7;
 }
 
@@ -297,8 +291,7 @@ void print_stack (u64* rbp, u64* rsp) {
     u64 val = (u64)*cur_word;
     printf("| %p: %p", cur_word, (u64*)*cur_word);
     if (is_heap_ptr(val)) {
-      //if (is_tuple(val)){ printf(" (tuple)"); }
-      //else if (is_closure(val)){ printf(" (closure)"); }
+      
       if (is_closure(val)){ printf(" (closure)"); }
       else if (is_tuple(val)){ printf(" (tuple)"); }
     }
@@ -369,20 +362,14 @@ VAL size(VAL val){
 
 
 u64 copy(VAL* o){
-    //printf("COPY o = %p \n",o);
+  
     if (!is_forwarded((u64) o)){
-    //printf("Al entrar al copy no forwardeado\n"); 
-    //print_heaps();
+    
     //Si es clausura entonces encontramos raiz que referencia al heap, entonces debemos copiarla
     if (is_closure((VAL) o)){
-         //printf("IS_CLOSURE \n");
-         //printf("tageada closure = %p \n",o);
-        VAL* closure= (VAL *)( ((VAL) o)-5); // Le sacamos el tag
-        //printf("clos = %p \n",closure);
-        //printf("*clos = %lu \n",*closure);
-        
          
-
+        VAL* closure= (VAL *)( ((VAL) o)-5); // Le sacamos el tag
+        
         if (is_forwarded(*closure)){
           return ((VAL)*closure - FORWARDED_TAG);
         }
@@ -390,12 +377,9 @@ u64 copy(VAL* o){
         u64* oprim= ALLOC_PTR;
         u64* alloc_temp= ALLOC_PTR;
         ALLOC_PTR +=  size((VAL)o);
-        //printf("Size de o = %lu\n",size((VAL)o));
-        //copy from alloc to alloc_temp
         
         for (int i=0;i<size((VAL)o);i++){
           *(alloc_temp+i) = *(closure + i);
-          // alloc_temp++;
         }
         
         *closure=(u64)oprim+FORWARDED_TAG;
@@ -403,51 +387,32 @@ u64 copy(VAL* o){
     }
   
     //Si es tupla entonces encontramos raiz que referencia al heap, entonces debemos copiarla
-    // if(is_tuple((VAL) o)){
       else{
-        //printf("IS_TUPLE \n");
-        //print_heaps();
-        //printf("tageada tupla = %p \n",o);
+    
         VAL* tuple=(VAL *)(((VAL )o)-TUPLE_TAG); // Le sacamos el tag
-        //printf("paso \n");
-       // print(o);
-        //printf("tupla = %p \n",tuple);
-       // printf("*tupla = %lu \n",*tuple);
-        
-        
-
+    
         if (is_forwarded(*tuple)){
-           //printf("tuple IS forwaded already\n");
           return ((VAL)*tuple - FORWARDED_TAG);
         }
-        //printf("tupla no forwardeada\n") ; 
-        //print_heaps();
-        // printf("START COPY\n");
-
-        
-
+      
         u64* oprim= ALLOC_PTR;
         u64* alloc_temp= ALLOC_PTR;
         ALLOC_PTR += size((VAL)o);
-        //printf("Size de o = %lu\n",size((VAL)o));
+  
         //copy from alloc to alloc_temp
         for (int i=0;i<size((VAL)o);i++){
           *alloc_temp = *(tuple + i);
           alloc_temp++;
         }
-        //printf("despues del for\n") ; 
-        //forwarding-adress(o) = o'
-        //* (u64 *)forwarding_adress(*tuple) = alloc_temp;
-        //printf("Luego de la copia de desde alloc a alloc_temp") ; 
-       //print_heaps();
+        
         *tuple=(u64)oprim+FORWARDED_TAG;
-        //printf("tuple con o'= %p\n",tuple);
+        
         return (u64)oprim;
 
       }
     }
     else{ // Es un forwarded, por lo que debemos devolver la dirección sin el tag de forwarded
-      //printf("ES FORWARDED\n");
+      //Este caso nunca deberia pasar
       return (u64)o - FORWARDED_TAG;
     }
     
@@ -455,55 +420,31 @@ u64 copy(VAL* o){
 
 
 void scan_objects(){
-  //printf("SCAN_PTR = %p",SCAN_PTR);
-  //print_heaps();
   
   while (SCAN_PTR<ALLOC_PTR){
         VAL o=*SCAN_PTR;  
-        // for (int i=0;i<size(o);i++){          
-          
-        //   VAL r = *((VAL* )o+i);
-          
-        //   *scan_ptr_tmp=(VAL)copy((VAL *)r);
-        //   scan_ptr_tmp+=1;
-
-        // }
-        //printf("SCAN OBJECTS\n");
         
-        //print_heaps();
-        //printf("SCAN _ POINTER = %p\n",SCAN_PTR);
-        //print(o);
-        //printf("o = %lu\n",o);
-
         if((is_closure(o) || is_tuple(o)) && is_heap_ptr(o)){
-          //printf("AA\n");
-          //printf("%i",is_closure(o));
         u64 tag = o & 7LL;   
         *SCAN_PTR=(VAL)copy((VAL *)o)+tag;
         }
 
         SCAN_PTR+=1;
-        //SCAN_PTR = SCAN_PTR + size(o);
+        
   }
 
 }
 
 void scan_roots(u64* cur_frame, u64* cur_sp){
-  // printf("scan rootsssssssss\n");
-  // printf("cur_frame %p\n",cur_frame);
-  // printf("STACK_BOTTOM %p\n",STACK_BOTTOM);
-
+ 
   while(cur_sp < STACK_BOTTOM){
   
   for (u64* cur_word = cur_sp; cur_word < cur_frame; cur_word++) {
     u64 root = (u64)*cur_word;
     //*cur_word = direccion retorno copy;
     if((is_closure(root) || is_tuple(root)) && is_heap_ptr(root)){
-      //printf("BBBB\n");
       u64 tag = root & 7LL; 
       root=(u64)copy((VAL *)root)+tag;
-      //printf("root = %lu\n",root);
-      //print_heaps();
       *cur_word = root;
     }
 
@@ -513,29 +454,6 @@ void scan_roots(u64* cur_frame, u64* cur_sp){
     cur_frame = (u64 *)*cur_frame;
   }
 }
-
-// void scan_roots(u64* cur_frame, u64* cur_sp){
- 
-//   for (u64* cur_word = cur_sp; cur_word < STACK_BOTTOM; cur_word++) {
-//     u64 root = (u64)*cur_word;
-//     //print_stack(cur_frame,cur_sp);
-    
-  
-//     //*cur_word = direccion retorno copy;
-//     if((is_tuple(root) || is_closure(root)) && is_heap_ptr(root)){
-//       //printf("curr_word = %p \n",cur_word);
-//       //printf("root = %p\n", (VAL *) root);
-
-//       root=(u64)copy((VAL *)root);
-
-//       *cur_word = root;
-//     }
-//   }
-
-// }
-
-
-
 
 u64* collect(u64* cur_frame, u64* cur_sp) {
   
@@ -550,65 +468,35 @@ u64* collect(u64* cur_frame, u64* cur_sp) {
 
   
   // scan stack and copy roots
-  //printf("antes de entrar a scan_roots\n") ; 
   scan_roots(cur_frame,cur_sp);
-  //printf("saliendo de scan_roots\n") ; 
+
   // scan objects in the heap
-  //printf("antes de entrar a scan_objects\n") ; 
-  //print_heaps();
   scan_objects();
-  //printf("saliendo de scan objects\n") ; 
-  //print_heaps();
+
   // clean old space
   for (int i=0;i<HEAP_SIZE;i++){
     FROM_SPACE[i] = 0;
   }
-  //print_heaps();
+
   return ALLOC_PTR;
 }
 
 /* trigger GC if enabled and needed, out-of-memory error if insufficient */
 u64* try_gc(u64* alloc_ptr, u64 words_needed, u64* cur_frame, u64* cur_sp) {
-  // printf("USE_GC= %i\n",USE_GC);
-  // printf("alloc_ptr= %p\n",alloc_ptr);
-  // printf("words_needed= %lu\n",words_needed);
-  // printf("cur_frame= %p\n",cur_frame);
-  // printf("cur_sp= %p\n",cur_sp);
-  // printf("FROM_SPACE= %p\n",FROM_SPACE);
-  // printf("TO_SPACE= %p\n",TO_SPACE);
-  // printf("HEAP_SIZE= %lu\n",HEAP_SIZE);
-  //printf("TRY___GC");
-  //print_heaps();
   
   if (USE_GC==1 && alloc_ptr + words_needed > TO_SPACE + HEAP_SIZE) {
-  //print_stack(cur_frame,cur_sp);
-  // printf("USE_GC= %i\n",USE_GC);
-  //printf("alloc_ptr= %p\n",alloc_ptr);
-  //printf("words_needed= %lu\n",words_needed);
-  // printf("cur_frame= %p\n",cur_frame);
-  // printf("cur_sp= %p\n",cur_sp);
-  // printf("FROM_SPACE= %p\n",FROM_SPACE);
-  // printf("TO_SPACE= %p\n",TO_SPACE);
-  // printf("HEAP_SIZE= %lu\n",HEAP_SIZE);
-  
 
     printf("| need memory: GC!\n");
-    //print_heaps();
     alloc_ptr = collect(cur_frame, cur_sp);
-    //print_heaps();
-    // printf("alloc_ptr= %p\n",alloc_ptr);
-    // printf("FROM_SPACE= %p\n",FROM_SPACE);
-    // printf("TO_SPACE= %p\n",TO_SPACE);
     
   }
    
   if (alloc_ptr + words_needed > TO_SPACE + HEAP_SIZE) {
     printf("| Error: out of memory!\n\n");
-    //print_stack(cur_frame, cur_sp);
-    //print_heaps();
+
     exit(-1);
   }
-  //printf("TERMINA TRY_GC\n");
+
   return alloc_ptr;
 }
 
@@ -637,17 +525,15 @@ int main(int argc, char** argv) {
 
 
   char *SAFE = getenv("SAFE");
-
-  //uint64_t* HEAP = calloc(1024, sizeof(uint64_t)); // Allocate 8KB of memory for now
  
   /* setting up two space heap for GC */
   u64* heap = (u64*)calloc((HEAP_SIZE * 2) + 7, sizeof(u64));
   HEAP_START = (u64*)(((u64)heap + 7) & ~0x7);
-  /* TBD: initialize HEAP_MID, HEAP_END, FROM_SPACE, TO_SPACE */
-  HEAP_MID = HEAP_START + HEAP_SIZE;   /* TBD */
-  HEAP_END = HEAP_START + (HEAP_SIZE*2 - 1);   /* TBD */
-  TO_SPACE = HEAP_START; /* TBD */
-  FROM_SPACE = HEAP_MID;   /* TBD */
+
+  HEAP_MID = HEAP_START + HEAP_SIZE;
+  HEAP_END = HEAP_START + (HEAP_SIZE*2 - 1);
+  TO_SPACE = HEAP_START;
+  FROM_SPACE = HEAP_MID;
  
   if (SAFE){
      strcpy(safe_type,SAFE);
@@ -659,10 +545,7 @@ int main(int argc, char** argv) {
 
   
   u64 result = our_code_starts_here(heap);
-  // print_heaps(); // borrar
-  //printf(" HEAP DEL RESULT\n");
   print_res(result);
-  //print_heaps();
   free(heap);
   return 0;
 }

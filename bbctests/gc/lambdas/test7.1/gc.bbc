@@ -1,0 +1,25 @@
+NAME: closure and tuple with gc
+DESCRIPTION: with HEAP_SIZE 16. With gc it gives a result
+PARAMS: HEAP_SIZE=16, USE_GC=1
+SRC:
+(
+(def (f)
+    (+ (let (t (lambda () (lambda (x) x)))
+        (let (x (lambda () t))
+        (@ (@ (@ x))100)
+        ))
+        (let (z (tup 100))
+            (get z 0))
+    )
+)
+(let (res (f))
+    (+ res (let (z (tup 100))
+                (let (w (tup 3 4 5 6))
+                    (get z 0)
+                )
+            )
+    )
+)
+)
+EXPECTED:
+|ORACLE
